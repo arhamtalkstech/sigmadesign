@@ -37,6 +37,20 @@ export async function importFileToLibrary(file: File): Promise<LibraryFile> {
   return data.file as LibraryFile;
 }
 
+/** Create an empty canvas file in the library (for clipboard paste / new work). */
+export async function createBlankLibraryFile(
+  name = "Untitled"
+): Promise<LibraryFile> {
+  const res = await fetch("/api/library", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ blank: true, name }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Could not create blank file");
+  return data.file as LibraryFile;
+}
+
 export async function openLibraryFile(id: string) {
   const res = await fetch(`/api/library/${id}`, { cache: "no-store" });
   const data = await res.json();

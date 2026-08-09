@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  createBlankLibraryFile,
   deleteLibraryFile,
   fetchLibrary,
   formatBytes,
@@ -82,6 +83,22 @@ export function Home() {
     }
   };
 
+  /** Empty canvas ready for clipboard paste (Ctrl/Cmd+V). */
+  const onNewBlank = async () => {
+    setBusy(true);
+    setError(null);
+    setStatus("Creating blank file…");
+    try {
+      const item = await createBlankLibraryFile("Untitled");
+      await refresh();
+      router.push(`/file/${item.id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+      setStatus(null);
+    }
+  };
+
   const onDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (!confirm("Remove this file from your SigmaDesign library?")) return;
@@ -110,6 +127,16 @@ export function Home() {
           </div>
         </div>
         <div className="sigma-home-actions">
+          <button
+            type="button"
+            className="sigma-btn sigma-btn-ghost"
+            onClick={() => void onNewBlank()}
+            disabled={busy || loading}
+            title="Empty canvas — paste design layers with Ctrl/Cmd+V"
+          >
+            <Icon icon={ChromeIcons.Plus} size={14} />
+            New blank file
+          </button>
           <button
             type="button"
             className="sigma-btn sigma-btn-primary"
@@ -151,10 +178,9 @@ export function Home() {
           <div className="sigma-drop-kicker">Your library</div>
           <div className="sigma-drop-title">Drop a design file</div>
           <div className="sigma-drop-sub">
-            Accepts <code>.sig</code> (native) and <code>.fig</code> design
-            archives. Import once — SigmaDesign stores a <code>.sig</code> copy
-            and a stable file id so you can reopen without hunting the original
-            path.
+            Accepts <code>.sig</code> and <code>.fig</code> archives — or{" "}
+            <strong>New blank file</strong>, then paste design layers with{" "}
+            <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>V</kbd> on the canvas.
           </div>
         </section>
 

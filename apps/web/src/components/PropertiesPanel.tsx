@@ -36,6 +36,7 @@ export function PropertiesPanel() {
   const patchSelected = useDocumentStore((s) => s.patchSelected);
   const moveSelected = useDocumentStore((s) => s.moveSelected);
 
+  const renameNode = useDocumentStore((s) => s.renameNode);
   const node = selection.length === 1 ? doc.nodes[selection[0]!] : null;
   const multi = selection.length > 1;
 
@@ -62,7 +63,31 @@ export function PropertiesPanel() {
 
         {node && (
           <>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>{node.name}</div>
+            <div className="section-title">Layer</div>
+            <div className="field-row" style={{ marginBottom: 10 }}>
+              <label htmlFor="layer-name">Name</label>
+              <input
+                id="layer-name"
+                className="field-input"
+                type="text"
+                key={node.id}
+                defaultValue={node.name}
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  if (v && v !== node.name) {
+                    renameNode(node.id, v);
+                  } else {
+                    e.target.value = node.name;
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                style={{ flex: 1, minWidth: 0, fontWeight: 600 }}
+              />
+            </div>
             <div
               style={{
                 color: "var(--chrome-text-muted)",

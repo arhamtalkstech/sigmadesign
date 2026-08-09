@@ -236,10 +236,12 @@ export function mapFigNode(
       | undefined
   )?.styleOverrideTable?.[0];
 
+  // Clipboard / partial nodeChanges sometimes omit or blank `name`
+  const rawName = typeof n.name === "string" ? n.name.trim() : "";
   const base = {
     id,
     type,
-    name: n.name ?? type,
+    name: rawName || type,
     parentId,
     children,
     visible: n.visible !== false,

@@ -85,6 +85,8 @@ interface DocumentState {
 
   selectAtPoint: (worldX: number, worldY: number, additive?: boolean) => void;
   patchSelected: (patch: Partial<SceneNode>) => void;
+  /** Rename any node by id (layers panel / properties). */
+  renameNode: (id: NodeId, name: string) => void;
   moveSelected: (dx: number, dy: number) => void;
   createNodeAt: (
     type: "FRAME" | "RECTANGLE" | "ELLIPSE" | "TEXT",
@@ -110,6 +112,8 @@ interface DocumentState {
 
 let localIdCounter = 100000;
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
+/** Last kiwi schema seen this session — used when pasting into blank files. */
+let sessionSchemaCache: Uint8Array | undefined;
 
 function cloneDoc(doc: AlteronDocument): AlteronDocument {
   return structuredClone(doc);
@@ -150,7 +154,15 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
   setTool: (tool) => set({ tool }),
   setViewport: (v) => {
-    set((s) => ({ viewport: { ...s.viewport, ...v } }));
+    set((s) => {
+      const next = { ...s.viewport, ...v };
+      if (typeof next.zoom === "number") {
+        // Keep zoom inside shared MIN/MAX (see lib/viewport.ts)
+        const z = next.zoom;
+        next.zoom = Math.min(256, Math.max(0.0001, z));
+      }
+      return { viewport: next };
+    });
     get().persistSession();
   },
   setStatus: (status) => set({ status }),
@@ -247,6 +259,17 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
 
       const viewport = result.viewport ?? defaultViewport(doc);
+
+      if (doc.figmaSchemaBase64) {
+        try {
+          const bin = atob(doc.figmaSchemaBase64);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          sessionSchemaCache = bytes;
+        } catch {
+          /* ignore corrupt schema cache */
+        }
+      }
 
       set({
         doc,
@@ -369,7 +392,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
   pasteDesignHtml: async (html) => {
     if (!isFigmaClipboardHtml(html)) {
-      set({ status: "Clipboard is not a recognized design payload" });
+      set({
+        status:
+          "Clipboard is not a design payload — copy layers from a design tool first",
+      });
       return;
     }
     set({ loading: true, status: "Pasting clipboard…" });
@@ -380,9 +406,15 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         const bin = atob(doc.figmaSchemaBase64);
         schemaBytes = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) schemaBytes[i] = bin.charCodeAt(i);
+      } else if (sessionSchemaCache) {
+        // Schema from a previous import in this browser session (helps blank files)
+        schemaBytes = sessionSchemaCache;
       }
 
       const payload = decodeFigmaClipboard(html, schemaBytes);
+      if (payload.schemaBytes?.length) {
+        sessionSchemaCache = payload.schemaBytes;
+      }
       const synthetic = {
         header: { prelude: "fig-kiwi", version: 0 },
         meta: {
@@ -609,6 +641,20 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       computeAbsoluteTransforms(next, next.currentPageId);
     }
     set({ doc: next });
+  },
+
+  renameNode: (id, name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const { doc } = get();
+    if (!doc.nodes[id] || doc.nodes[id]!.name === trimmed) return;
+    get().pushHistory();
+    let next = updateNode(doc, id, { name: trimmed });
+    if (next.currentPageId) {
+      computeAbsoluteTransforms(next, next.currentPageId);
+    }
+    set({ doc: next });
+    get().persistSession();
   },
 
   moveSelected: (dx, dy) => {

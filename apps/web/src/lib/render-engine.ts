@@ -380,6 +380,105 @@ function isMaskGroup(node: SceneNode): boolean {
   return n === "mask group" || n.endsWith("mask group") || n === "mask";
 }
 
+const NAMED_CONTAINER_TYPES = new Set([
+  "FRAME",
+  "SECTION",
+  "COMPONENT",
+  "INSTANCE",
+  "GROUP",
+]);
+
+/** Screen-space name label above a frame (drawn in world units with invZ scale). */
+function drawNameLabel(
+  ctx: CanvasRenderingContext2D,
+  name: string,
+  x: number,
+  y: number,
+  invZ: number,
+  selected: boolean
+) {
+  const label = name.trim();
+  if (!label) return;
+  const fontPx = Math.max(10, Math.min(13, 11 * Math.min(invZ * 12, 1.4)));
+  // Use screen-stable size: font in world units so it stays ~11–13 CSS px
+  const fontWorld = fontPx * invZ;
+  ctx.save();
+  ctx.font = `500 ${fontWorld}px ${
+    typeof document !== "undefined"
+      ? getComputedStyle(document.body).fontFamily || "system-ui,sans-serif"
+      : "system-ui,sans-serif"
+  }`;
+  ctx.textBaseline = "bottom";
+  ctx.textAlign = "left";
+  const padX = 3 * invZ;
+  const gap = 2 * invZ;
+  const tw = ctx.measureText(label).width;
+  const th = fontWorld * 1.15;
+  const lx = x;
+  const ly = y - gap;
+  ctx.fillStyle = selected
+    ? "rgba(13,153,255,0.92)"
+    : "rgba(120,130,150,0.55)";
+  // subtle pill behind text for contrast on any canvas bg
+  ctx.fillRect(lx, ly - th, tw + padX * 2, th + 1 * invZ);
+  ctx.fillStyle = selected ? "#ffffff" : "rgba(200,210,225,0.95)";
+  ctx.fillText(label, lx + padX, ly);
+  ctx.restore();
+}
+
+/**
+ * Draw names for top-level and expanded-visible containers in the viewport.
+ * Cap count for performance on dense pages.
+ */
+function drawContainerNameLabels(
+  ctx: CanvasRenderingContext2D,
+  doc: AlteronDocument,
+  rootIds: NodeId[],
+  zoom: number,
+  invZ: number,
+  view: ViewBounds
+) {
+  let drawn = 0;
+  const maxLabels = zoom < 0.15 ? 40 : zoom < 0.4 ? 120 : 280;
+
+  const walk = (ids: NodeId[], depth: number) => {
+    if (drawn >= maxLabels || depth > 6) return;
+    for (const id of ids) {
+      if (drawn >= maxLabels) return;
+      const node = doc.nodes[id];
+      if (!node || node.visible === false) continue;
+      const b = node.absoluteBounds;
+      if (!b || b.width < 2 || b.height < 2) {
+        if (node.children.length) walk(node.children, depth + 1);
+        continue;
+      }
+      // Outside viewport (with padding for label above)
+      if (
+        b.x + b.width < view.x ||
+        b.x > view.x + view.w ||
+        b.y + b.height < view.y ||
+        b.y - 20 * invZ > view.y + view.h
+      ) {
+        continue;
+      }
+      if (
+        NAMED_CONTAINER_TYPES.has(node.type) &&
+        node.name &&
+        node.name !== node.type &&
+        b.width * zoom >= 24
+      ) {
+        drawNameLabel(ctx, node.name, b.x, b.y, invZ, false);
+        drawn++;
+      }
+      // Only descend into large enough frames
+      if (node.children.length && b.width * zoom >= 40 && depth < 4) {
+        walk(node.children, depth + 1);
+      }
+    }
+  };
+  walk(rootIds, 0);
+}
+
 function mapLineCap(cap?: string): CanvasLineCap {
   if (cap === "ROUND") return "round";
   if (cap === "SQUARE") return "square";
@@ -631,6 +730,12 @@ export function renderScene(
 
   walk(page.children, 0);
 
+  // Frame / section / component name labels (like design tools: above the box)
+  // Drawn after the tree so they sit above fills; skip when zoomed out too far.
+  if (zoom >= 0.08) {
+    drawContainerNameLabels(ctx, doc, page.children, zoom, invZ, viewBounds);
+  }
+
   // Selection (cheap)
   const selection = options?.selection;
   if (selection?.length) {
@@ -641,6 +746,10 @@ export function renderScene(
       ctx.strokeStyle = "#0d99ff";
       ctx.lineWidth = 1.5 * invZ;
       ctx.strokeRect(b.x, b.y, b.width, b.height);
+      // Selected node name always readable above the box
+      if (n.name && zoom >= 0.05) {
+        drawNameLabel(ctx, n.name, b.x, b.y, invZ, true);
+      }
       const hs = 6 * invZ;
       ctx.fillStyle = "#fff";
       for (const [hx, hy] of [

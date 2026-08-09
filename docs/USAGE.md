@@ -21,10 +21,19 @@ The home screen is your **local library only** — not the canvas.
 
 | Action | Result |
 | --- | --- |
+| **New blank file** | Creates an empty canvas. On the canvas, paste design layers with **Ctrl/Cmd+V** (after copying from a design tool). |
 | **Import design file** | Choose a `.sig` or `.fig` archive. SigmaDesign stores a `.sig` copy under `~/.sigmadesign/library/` and opens `/file/{id}`. |
 | **Drop zone** | Drag-and-drop a design archive onto the home drop area. |
 | **Click a file card** | Opens `/file/{id}` with that document. |
 | **Remove** | Deletes the library entry and cached ADM (does not affect originals outside the library). |
+
+### Paste workflow
+
+1. Home → **New blank file** (or open any file).  
+2. In your design tool: select layers → **Copy**.  
+3. Focus the SigmaDesign canvas → **Ctrl/Cmd+V**.  
+
+Clipboard payloads that embed a full kiwi schema paste without extra setup. If paste says a schema is missing, import any `.fig` / `.sig` once in the same browser session (schema is cached for later pastes into blank files).
 
 Data lives on your machine only (`SIGMADESIGN_HOME` overrides the default `~/.sigmadesign`).
 

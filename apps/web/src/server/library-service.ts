@@ -20,7 +20,10 @@ import {
 } from "node:fs";
 import { basename, join } from "node:path";
 import { importFigFile } from "@alteron/fig-import";
-import type { AlteronDocument } from "@alteron/document-model";
+import {
+  createEmptyDocument,
+  type AlteronDocument,
+} from "@alteron/document-model";
 import {
   deleteLibraryFile,
   getLibraryFile,
@@ -38,6 +41,16 @@ import {
   getSigmaHome,
   sigPathForId,
 } from "./paths";
+
+/** Magic prefix for blank library files (ADM lives in cache; not a full archive). */
+const BLANK_SIG_MAGIC = Buffer.from("SIGMABLANK\n", "utf8");
+
+function isBlankSigFile(bytes: Buffer): boolean {
+  return (
+    bytes.length >= BLANK_SIG_MAGIC.length &&
+    bytes.subarray(0, BLANK_SIG_MAGIC.length).equals(BLANK_SIG_MAGIC)
+  );
+}
 
 export type LibraryListItem = {
   id: string;
@@ -213,6 +226,49 @@ export async function importToLibrary(
   return rowToListItem(row);
 }
 
+/**
+ * Create an empty canvas in the library (for paste / new work).
+ * Writes a small marker .sig + ADM cache so reopen works without a full archive.
+ */
+export async function createBlankLibraryFile(
+  name = "Untitled"
+): Promise<LibraryListItem> {
+  ensureSigmaDirs();
+  const id = randomUUID().replace(/-/g, "").slice(0, 16);
+  const safeName = sanitizeName(name.endsWith(".sig") ? name : `${name}.sig`);
+  const filename = `${id}.sig`;
+  const dest = sigPathForId(id);
+
+  writeFileSync(dest, BLANK_SIG_MAGIC);
+  const doc = createEmptyDocument(safeName.replace(/\.sig$/i, ""));
+  doc.meta = { ...doc.meta, source: "blank" };
+
+  const mtimeMs = statSync(dest).mtimeMs;
+  memoryDocCache.set(id, { mtimeMs, version: ADM_CACHE_VERSION, doc });
+
+  const row = upsertLibraryFile({
+    id,
+    name: doc.name,
+    filename,
+    source_format: "sig",
+    byte_size: BLANK_SIG_MAGIC.byteLength,
+    node_count: Object.keys(doc.nodes).length,
+    page_count: doc.pages.length,
+    last_opened_at: Date.now(),
+    viewport_json: JSON.stringify({ x: 80, y: 80, zoom: 1 }),
+    current_page_id: doc.currentPageId,
+    expanded_json: null,
+    selection_json: null,
+    thumbnail_path: null,
+    cache_mtime_ms: mtimeMs,
+    notes: "blank",
+  });
+
+  writeCache(id, doc, mtimeMs);
+  setLastOpenFile(id);
+  return rowToListItem(row);
+}
+
 export async function openLibraryFile(id: string): Promise<OpenLibraryResult> {
   ensureSigmaDirs();
   const row = getLibraryFile(id);
@@ -229,7 +285,12 @@ export async function openLibraryFile(id: string): Promise<OpenLibraryResult> {
   if (!doc) {
     fromCache = false;
     const bytes = readFileSync(path);
-    doc = await importFigFile(bytes);
+    if (isBlankSigFile(bytes) || row.notes === "blank") {
+      doc = createEmptyDocument(row.name);
+      doc.meta = { ...doc.meta, source: "blank" };
+    } else {
+      doc = await importFigFile(bytes);
+    }
     doc.name = row.name;
     writeCache(id, doc, mtimeMs);
     memoryDocCache.set(id, {

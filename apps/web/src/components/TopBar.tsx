@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useDocumentStore } from "@/store/document-store";
 import { importFileToLibrary } from "@/lib/library-api";
 import { ChromeIcons, Icon } from "@/lib/chrome-icons";
+import { clampZoom, formatZoomPercent } from "@/lib/viewport";
 
 export function TopBar() {
   const router = useRouter();
@@ -112,20 +113,20 @@ export function TopBar() {
           className="sigma-topbar-btn"
           aria-label="Zoom out"
           onClick={() =>
-            setViewport({ zoom: Math.max(0.05, viewport.zoom / 1.25) })
+            setViewport({ zoom: clampZoom(viewport.zoom / 1.25) })
           }
         >
           <Icon icon={ChromeIcons.ZoomOut} size={14} />
         </button>
-        <span className="sigma-zoom-pct tabular">
-          {Math.round(viewport.zoom * 100)}%
+        <span className="sigma-zoom-pct tabular" title="Canvas zoom">
+          {formatZoomPercent(viewport.zoom)}
         </span>
         <button
           type="button"
           className="sigma-topbar-btn"
           aria-label="Zoom in"
           onClick={() =>
-            setViewport({ zoom: Math.min(8, viewport.zoom * 1.25) })
+            setViewport({ zoom: clampZoom(viewport.zoom * 1.25) })
           }
         >
           <Icon icon={ChromeIcons.ZoomIn} size={14} />

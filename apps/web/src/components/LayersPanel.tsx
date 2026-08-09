@@ -48,9 +48,12 @@ export function LayersPanel() {
   const setSelection = useDocumentStore((s) => s.setSelection);
   const toggleExpanded = useDocumentStore((s) => s.toggleExpanded);
   const setPage = useDocumentStore((s) => s.setPage);
+  const renameNode = useDocumentStore((s) => s.renameNode);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
+  const [editingId, setEditingId] = useState<NodeId | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const visiblePages = useMemo(
     () => doc.pages.filter((p) => !p.internal),
@@ -162,7 +165,12 @@ export function LayersPanel() {
                     role="treeitem"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelection([row.id]);
+                      if (editingId !== row.id) setSelection([row.id]);
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setEditingId(row.id);
+                      setEditValue(node.name);
                     }}
                     style={{
                       display: "flex",
@@ -226,17 +234,46 @@ export function LayersPanel() {
                     >
                       <Icon icon={TypeIcon} size={13} />
                     </span>
-                    <span
-                      style={{
-                        flex: 1,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        opacity: node.visible === false ? 0.4 : 1,
-                      }}
-                    >
-                      {node.name}
-                    </span>
+                    {editingId === row.id ? (
+                      <input
+                        className="field-input"
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onBlur={() => {
+                          renameNode(row.id, editValue);
+                          setEditingId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            renameNode(row.id, editValue);
+                            setEditingId(null);
+                          }
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          height: 22,
+                          padding: "0 6px",
+                          fontSize: 12,
+                        }}
+                      />
+                    ) : (
+                      <span
+                        style={{
+                          flex: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          opacity: node.visible === false ? 0.4 : 1,
+                        }}
+                        title="Double-click to rename"
+                      >
+                        {node.name || node.type}
+                      </span>
+                    )}
                   </div>
                 );
               })}

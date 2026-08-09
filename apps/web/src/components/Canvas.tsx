@@ -9,6 +9,7 @@ import {
   renderScene,
   type Viewport,
 } from "@/lib/render-engine";
+import { clampZoom } from "@/lib/viewport";
 import {
   ContextMenu,
   type ContextMenuState,
@@ -170,7 +171,7 @@ export function Canvas() {
               ? e.deltaY * 32
               : e.deltaY;
         const factor = Math.exp(-delta * 0.01);
-        const newZoom = Math.min(8, Math.max(0.02, vp.zoom * factor));
+        const newZoom = clampZoom(vp.zoom * factor);
         const wx = (sx - vp.x) / vp.zoom;
         const wy = (sy - vp.y) / vp.zoom;
         viewportRef.current = {
@@ -524,9 +525,9 @@ export function Canvas() {
               Empty canvas
             </div>
             <div style={{ color: "var(--chrome-text-muted)" }}>
-              Drag-and-drop a <code>.sig</code> or <code>.fig</code> design
-              file, open one from the library, or paste design clipboard
-              (Ctrl/Cmd+V).
+              Paste design layers with <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+
+              <kbd>V</kbd> (copy from a design tool first), or drop a{" "}
+              <code>.sig</code> / <code>.fig</code> file onto the canvas.
             </div>
           </div>
         </div>
