@@ -1,0 +1,1013 @@
+:root {
+  /* SigmaDesign — one cool gray family + single indigo accent (TasteSkill) */
+  --sigma-indigo: #6b70e8;
+  --sigma-indigo-dim: #5559c9;
+  --sigma-mint: #5ecfba;
+  --sigma-danger: #e86a76;
+
+  --canvas-color: #13151c;
+  --chrome-bg: #11131a;
+  --chrome-bg-elevated: #1b1f2b;
+  --chrome-bg-soft: #161922;
+  --chrome-border: #2c3140;
+  --chrome-border-strong: #3d4458;
+  --chrome-text: #eef0f5;
+  --chrome-text-muted: #8f96a8;
+  --chrome-hover: #252a38;
+  --accent: var(--sigma-indigo);
+  --accent-dim: var(--sigma-indigo-dim);
+  --accent-secondary: var(--sigma-mint);
+  --danger: var(--sigma-danger);
+
+  --left-rail-width: 52px;
+  --left-panel-width: 268px;
+  --right-panel-width: 268px;
+  --top-bar-height: 52px;
+  --font: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow-lg: 0 20px 48px rgba(12, 14, 24, 0.55);
+  --z-skip: 100;
+  --z-topbar: 20;
+  --z-loading: 30;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: var(--z-skip);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
+  transition: top 0.15s;
+}
+
+.skip-link:focus {
+  top: 10px;
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--chrome-text);
+  background: var(--chrome-bg);
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+.design-canvas {
+  touch-action: none;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Dark-theme form controls (never native white fields) ─ */
+:root {
+  --field-bg: #0c0e14;
+  --field-bg-hover: #12151e;
+  --field-text: #e8eaf0;
+  --field-placeholder: #6b7285;
+  --field-border: #32384a;
+  --field-border-focus: var(--accent);
+}
+
+input.field-input,
+textarea.field-input,
+select.field-input,
+.field-input {
+  background: var(--field-bg) !important;
+  color: var(--field-text) !important;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  min-width: 0;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+  color-scheme: dark;
+}
+
+input.field-input::placeholder,
+textarea.field-input::placeholder,
+.field-input::placeholder {
+  color: var(--field-placeholder) !important;
+  opacity: 1;
+}
+
+input.field-input:hover,
+textarea.field-input:hover,
+.field-input:hover {
+  background: var(--field-bg-hover) !important;
+  border-color: var(--chrome-border-strong);
+}
+
+input.field-input:focus,
+textarea.field-input:focus,
+select.field-input:focus,
+.field-input:focus {
+  border-color: var(--field-border-focus);
+  box-shadow: 0 0 0 2px rgba(107, 112, 232, 0.25);
+}
+
+/* number spinners / autofill */
+input.field-input::-webkit-outer-spin-button,
+input.field-input::-webkit-inner-spin-button {
+  opacity: 0.5;
+}
+
+input.field-input:-webkit-autofill,
+textarea.field-input:-webkit-autofill {
+  -webkit-text-fill-color: var(--field-text);
+  -webkit-box-shadow: 0 0 0 1000px var(--field-bg) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+input[type="color"] {
+  color-scheme: dark;
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 1fr;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.field-row label {
+  color: var(--chrome-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.section-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chrome-text-muted);
+  margin: 14px 0 8px;
+}
+
+/* Context menu */
+.sigma-context-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 200px;
+  padding: 6px;
+  background: var(--chrome-bg-elevated);
+  border: 1px solid var(--chrome-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  color: var(--chrome-text);
+}
+
+.sigma-context-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--chrome-text);
+  transition: background 0.12s;
+}
+
+.sigma-context-item:hover,
+.sigma-context-item:focus-visible {
+  background: var(--chrome-hover);
+  outline: none;
+}
+
+.sigma-context-item.danger {
+  color: #f0a0a8;
+}
+
+.sigma-context-item.danger:hover {
+  background: rgba(232, 106, 118, 0.12);
+}
+
+.sigma-context-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--chrome-border);
+}
+
+.sigma-context-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
+  background: rgba(91, 95, 255, 0.12);
+  color: #c8cbff;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #3a4460;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── Editor shell ─────────────────────────────────────────── */
+
+.app-shell {
+  position: relative;
+  display: grid;
+  /* chrome top (topbar [+ optional loading ribbon]) + workspace */
+  grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  height: 100vh;
+  width: 100vw;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  background: var(--chrome-bg);
+}
+
+/* Groups TopBar + loading ribbon so they share one grid row (auto height).
+   Without this, a sibling loading bar would land in the 1fr track and
+   stretch to half the viewport. */
+.sigma-chrome-top {
+  grid-row: 1;
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: var(--top-bar-height);
+  z-index: var(--z-topbar);
+}
+
+.workspace {
+  grid-row: 2;
+  grid-column: 1;
+  display: grid;
+  grid-template-columns: var(--left-rail-width) var(--left-panel-width) 1fr var(
+      --right-panel-width
+    );
+  min-height: 0;
+  height: 100%;
+}
+
+.panel {
+  background: var(--chrome-bg-soft);
+  border-right: 1px solid var(--chrome-border);
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel:last-child {
+  border-right: none;
+  border-left: 1px solid var(--chrome-border);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--chrome-text-muted);
+  border-bottom: 1px solid var(--chrome-border);
+  flex-shrink: 0;
+}
+
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--chrome-text-muted);
+  transition: background 0.2s, color 0.2s, transform 0.12s;
+}
+
+.icon-btn:hover {
+  background: var(--chrome-hover);
+  color: var(--chrome-text);
+}
+
+.icon-btn:active {
+  transform: scale(0.96);
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.icon-btn.active {
+  background: rgba(107, 112, 232, 0.16);
+  color: #c5c8f5;
+  box-shadow: inset 0 0 0 1px rgba(107, 112, 232, 0.35);
+}
+
+.canvas-main {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.canvas-main > * {
+  flex: 1;
+  min-height: 0;
+}
+
+.empty-state {
+  padding: 28px 18px;
+  color: var(--chrome-text-muted);
+  line-height: 1.55;
+  font-size: 12px;
+}
+
+.empty-state strong {
+  display: block;
+  color: var(--chrome-text);
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+/* ── Sigma brand bits ─────────────────────────────────────── */
+
+.sigma-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(
+    145deg,
+    var(--sigma-indigo) 0%,
+    #4a4fb8 100%
+  );
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 8px 18px rgba(60, 64, 140, 0.4);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.sigma-logo-sm {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.sigma-logo-sm::after {
+  font-size: 12px;
+}
+
+.sigma-logo::after {
+  content: "Σ";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.sigma-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.12s, box-shadow 0.2s,
+    border-color 0.2s;
+}
+
+.sigma-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sigma-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.sigma-btn-primary {
+  background: var(--sigma-indigo);
+  color: white;
+  box-shadow: 0 4px 14px rgba(60, 64, 140, 0.35);
+}
+
+.sigma-btn-primary:hover:not(:disabled) {
+  background: var(--sigma-indigo-dim);
+}
+
+.sigma-btn-ghost {
+  background: var(--chrome-bg-elevated);
+  color: var(--chrome-text);
+  border: 1px solid var(--chrome-border);
+}
+
+.sigma-btn-ghost:hover:not(:disabled) {
+  background: var(--chrome-hover);
+  border-color: var(--chrome-border-strong);
+}
+
+/* ── Editor top bar ───────────────────────────────────────── */
+
+.sigma-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--chrome-border);
+  height: var(--top-bar-height);
+  z-index: var(--z-topbar);
+}
+
+.sigma-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: -0.03em;
+  transition: background 0.15s;
+}
+
+.sigma-topbar-brand:hover {
+  background: var(--chrome-hover);
+}
+
+.sigma-topbar-product {
+  letter-spacing: -0.03em;
+}
+
+.sigma-topbar-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.sigma-topbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-bg-elevated);
+  color: var(--chrome-text);
+  font-size: 11px;
+  font-weight: 550;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.sigma-topbar-btn:hover:not(:disabled) {
+  background: var(--chrome-hover);
+  border-color: var(--chrome-border);
+}
+
+.sigma-topbar-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.sigma-topbar-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.sigma-topbar-btn.primary {
+  background: rgba(107, 112, 232, 0.16);
+  border-color: rgba(107, 112, 232, 0.35);
+  color: #d0d3ff;
+}
+
+.sigma-topbar-title {
+  flex: 1;
+  text-align: center;
+  font-weight: 600;
+  font-size: 13px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sigma-topbar-docname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+  letter-spacing: -0.02em;
+}
+
+.sigma-pill {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--sigma-mint);
+  background: rgba(94, 207, 186, 0.1);
+  border: 1px solid rgba(94, 207, 186, 0.28);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.sigma-topbar-zoom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--chrome-text-muted);
+  font-size: 11px;
+}
+
+.sigma-zoom-pct {
+  min-width: 44px;
+  text-align: center;
+}
+
+.sigma-topbar-status {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--chrome-text-muted);
+  font-size: 11px;
+}
+
+.sigma-topbar-status.is-loading {
+  color: var(--accent);
+}
+
+/* Thin ribbon directly under TopBar (inside .sigma-chrome-top). */
+.sigma-loading-bar {
+  position: relative;
+  flex: 0 0 28px;
+  height: 28px;
+  background: rgba(107, 112, 232, 0.12);
+  border-bottom: 1px solid rgba(107, 112, 232, 0.28);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  z-index: var(--z-loading);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sigma-loading-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(107, 112, 232, 0.35),
+    transparent
+  );
+  animation: sigma-shimmer 1.2s ease-in-out infinite;
+}
+
+.sigma-loading-label {
+  position: relative;
+  font-size: 11px;
+  color: #c5c8f5;
+  font-weight: 500;
+}
+
+@keyframes sigma-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+/* ── Home screen ──────────────────────────────────────────── */
+
+.sigma-home {
+  position: relative;
+  min-height: 100vh;
+  overflow: auto;
+  background: var(--chrome-bg);
+  color: var(--chrome-text);
+}
+
+.sigma-home-bg {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(91, 95, 255, 0.22), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(0, 229, 192, 0.12), transparent 50%),
+    radial-gradient(ellipse 50% 30% at 50% 100%, rgba(155, 109, 255, 0.1), transparent 50%);
+  z-index: 0;
+}
+
+.sigma-home-header,
+.sigma-home-main {
+  position: relative;
+  z-index: 1;
+}
+
+.sigma-home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--chrome-border);
+  backdrop-filter: blur(12px);
+  background: rgba(15, 17, 23, 0.72);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.sigma-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sigma-brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.sigma-brand-tag {
+  font-size: 11px;
+  color: var(--chrome-text-muted);
+  margin-top: 2px;
+}
+
+.sigma-home-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sigma-home-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 28px 64px;
+}
+
+.sigma-dropzone {
+  border: 1.5px dashed var(--chrome-border-strong);
+  border-radius: var(--radius-lg);
+  padding: 40px 28px 36px;
+  text-align: left;
+  background: rgba(27, 31, 43, 0.72);
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  margin-bottom: 28px;
+  max-width: 100%;
+}
+
+.sigma-dropzone.is-over {
+  border-color: var(--accent);
+  background: rgba(107, 112, 232, 0.08);
+  box-shadow: 0 0 0 4px rgba(107, 112, 232, 0.1);
+}
+
+.sigma-drop-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chrome-text-muted);
+  margin-bottom: 8px;
+}
+
+.sigma-drop-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  margin-bottom: 10px;
+  text-wrap: balance;
+}
+
+.sigma-drop-sub {
+  color: var(--chrome-text-muted);
+  max-width: 54ch;
+  line-height: 1.6;
+  font-size: 13px;
+  text-wrap: pretty;
+}
+
+.sigma-status-banner {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(91, 95, 255, 0.12);
+  border: 1px solid rgba(91, 95, 255, 0.3);
+  color: #c8cbff;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.sigma-error-banner {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 92, 106, 0.1);
+  border: 1px solid rgba(255, 92, 106, 0.35);
+  color: #ffb4bb;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.sigma-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.sigma-section-head h2 {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sigma-count {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--chrome-text-muted);
+  background: var(--chrome-bg-elevated);
+  border: 1px solid var(--chrome-border);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.sigma-path {
+  font-size: 11px;
+  color: var(--chrome-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sigma-empty {
+  text-align: left;
+  padding: 28px 22px;
+  color: var(--chrome-text-muted);
+  line-height: 1.6;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-md);
+  background: var(--chrome-bg-elevated);
+  margin-bottom: 12px;
+}
+
+.sigma-empty p {
+  margin-bottom: 16px;
+  max-width: 48ch;
+  text-wrap: pretty;
+}
+
+.sigma-file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.sigma-file-card-wrap {
+  position: relative;
+}
+
+.sigma-file-card {
+  width: 100%;
+  text-align: left;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--chrome-border);
+  background: var(--chrome-bg-elevated);
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.sigma-file-card:hover:not(:disabled) {
+  border-color: rgba(107, 112, 232, 0.5);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.sigma-file-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sigma-file-thumb {
+  height: 88px;
+  background:
+    radial-gradient(ellipse 80% 80% at 10% 0%, rgba(107, 112, 232, 0.22), transparent 55%),
+    #151822;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.sigma-file-ext {
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: #a8ade8;
+}
+
+.sigma-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(107, 112, 232, 0.14);
+  color: #c5c8f5;
+  border: 1px solid rgba(107, 112, 232, 0.28);
+}
+
+.sigma-file-meta {
+  padding: 12px 14px 14px;
+}
+
+.sigma-file-name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+}
+
+.sigma-file-id {
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--chrome-text-muted);
+  margin-bottom: 6px;
+  opacity: 0.85;
+}
+
+.sigma-file-stats,
+.sigma-file-time {
+  font-size: 11px;
+  color: var(--chrome-text-muted);
+}
+
+.sigma-file-time {
+  margin-top: 2px;
+}
+
+.sigma-file-delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17, 19, 26, 0.72);
+  color: var(--chrome-text-muted);
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  z-index: 2;
+}
+
+.sigma-file-card-wrap:hover .sigma-file-delete,
+.sigma-file-delete:focus-visible {
+  opacity: 1;
+}
+
+.sigma-file-delete:hover,
+.sigma-file-delete:focus-visible {
+  background: rgba(232, 106, 118, 0.22);
+  color: #ffc0c6;
+  outline: none;
+}
+
+.sigma-home-footer {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--chrome-border);
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--chrome-text);
+}
+
+.sigma-footer-muted {
+  color: var(--chrome-text-muted);
+  font-size: 12px;
+}
+
+/* Top bar refinements */
+.sigma-topbar-btn {
+  padding: 6px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--chrome-bg-elevated);
+  color: var(--chrome-text);
+  font-size: 11px;
+  font-weight: 550;
+  border: 1px solid transparent;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.sigma-topbar-btn:hover:not(:disabled) {
+  background: var(--chrome-hover);
+  border-color: var(--chrome-border);
+}
+
+.sigma-topbar-btn.primary {
+  background: rgba(91, 95, 255, 0.18);
+  border-color: rgba(91, 95, 255, 0.35);
+  color: #d0d2ff;
+}

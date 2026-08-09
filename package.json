@@ -1,0 +1,28 @@
+{
+  "name": "sigmadesign",
+  "private": true,
+  "version": "0.2.0",
+  "description": "SigmaDesign — local-first design editor with .sig library and SQLite",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arhamtalkstech/sigmadesign.git"
+  },
+  "homepage": "https://github.com/arhamtalkstech/sigmadesign",
+  "bugs": {
+    "url": "https://github.com/arhamtalkstech/sigmadesign/issues"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @alteron/web dev",
+    "dev:3010": "pnpm --filter @alteron/web exec next dev --port 3010",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "fig:inspect": "pnpm --filter @alteron/fig-format inspect",
+    "typecheck": "pnpm -r typecheck",
+    "lint:brand": "pnpm --filter @alteron/web test -- src/routes-and-brand.test.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
