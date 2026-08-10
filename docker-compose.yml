@@ -1,0 +1,29 @@
+# SigmaDesign — one-command local run
+#
+#   docker compose up --build
+#   open http://localhost:3000
+#
+# Library files persist in the named volume `sigmadesign-data`
+# (mapped to SIGMADESIGN_HOME inside the container).
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      SIGMADESIGN_HOME: /data/sigmadesign
+      NODE_ENV: development
+      # Bind Next to all interfaces inside the container
+      HOSTNAME: 0.0.0.0
+    volumes:
+      # Persist library / SQLite across container restarts
+      - sigmadesign-data:/data/sigmadesign
+      # Optional: live-mount source for local hacking (comment out for pure image run)
+      # - .:/app
+      # - /app/node_modules
+    working_dir: /app
+    command: ["pnpm", "dev"]
+
+volumes:
+  sigmadesign-data:

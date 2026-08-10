@@ -5,7 +5,10 @@ Thanks for helping improve SigmaDesign.
 ## Prerequisites
 
 - **Node.js** ≥ 20  
-- **pnpm** 9.x (`corepack enable && corepack prepare pnpm@9.15.0 --activate`)
+- **pnpm** 9.x (`corepack enable && corepack prepare pnpm@9.15.0 --activate`)  
+- **Native build tools** for `better-sqlite3` (macOS: Xcode CLT; Linux: `build-essential` + Python 3; Windows: VS C++ Build Tools)
+
+Full table and Docker alternative: see [README — Prerequisites](./README.md#prerequisites) and [Troubleshooting](./README.md#troubleshooting).
 
 ## Setup
 
@@ -16,6 +19,8 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+**Docker:** `docker compose up --build` (no local Node toolchain required).
+
 ## Scripts
 
 | Command | What it does |
@@ -25,6 +30,8 @@ Open [http://localhost:3000](http://localhost:3000).
 | `pnpm test` | Run all package tests |
 | `pnpm typecheck` | TypeScript across the monorepo |
 | `pnpm build` | Production build |
+| `pnpm mcp` | Local agent server (stdio) |
+| `pnpm skill:pack` | Rebuild Agents skill zip |
 
 ## Package layout
 

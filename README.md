@@ -2,6 +2,8 @@
 
 **Local-first design editor.** Import a design archive once, keep it as **`.sig`** on your machine, and reopen anytime — no cloud seats, no accounts required for the core workflow.
 
+> **Who this is for:** developers and technical designers who can run a Node app from source. This is not a double-click desktop installer (yet). If you have Node 20 + pnpm — or Docker — you can run it.
+
 <p align="center">
   <img src="docs/screenshots/canvas-portfolio.jpg" alt="SigmaDesign canvas showing an imported product portfolio design" width="920" />
 </p>
@@ -54,15 +56,51 @@
 - **Auto-save** full document writeback into self-contained `.sig` files  
 - **Design system basics** — components, instances, fill styles, color variables, modes  
 - **Export PNG** of the page or current selection  
+- **Local coding agents** — connect machine agents to your library (see [Agents](#agents-coding-assistants))  
 - **No cloud required** for the core path  
+
+---
+
+## Prerequisites
+
+| Requirement | Notes |
+| --- | --- |
+| **Node.js ≥ 20** | [nodejs.org](https://nodejs.org/) or your package manager |
+| **pnpm 9.x** | Enable with Corepack (ships with Node): see below |
+| **Build tools for native modules** | `better-sqlite3` compiles on install (see OS notes) |
+
+### Install pnpm (recommended: Corepack)
+
+```bash
+corepack enable
+corepack prepare pnpm@9.15.0 --activate
+pnpm --version   # should print 9.x
+```
+
+If Corepack is unavailable: `npm install -g pnpm@9`
+
+### Native module build tools
+
+`pnpm install` builds **better-sqlite3**. You need a C/C++ toolchain:
+
+| OS | What to install |
+| --- | --- |
+| **macOS** | Xcode Command Line Tools: `xcode-select --install` |
+| **Ubuntu / Debian** | `sudo apt-get install -y build-essential python3` |
+| **Fedora** | `sudo dnf groupinstall "Development Tools"` + `python3` |
+| **Windows** | [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with “Desktop development with C++”, plus Python 3 |
+
+**Optional:** `canvas` (used for some PNG/agent screenshot paths) may need extra system libs on Linux (`libcairo2-dev`, `libpango1.0-dev`, etc.). The editor runs without a successful `canvas` install; only some export/agent screenshot features degrade.
 
 ---
 
 ## Quick start
 
-**Requirements:** Node.js ≥ 20, [pnpm](https://pnpm.io) 9.x
+### Option A — local Node (primary)
 
 ```bash
+git clone https://github.com/arhamtalkstech/sigmadesign.git
+cd sigmadesign
 pnpm install
 pnpm dev
 ```
@@ -73,6 +111,22 @@ Open **http://localhost:3000**
 # alternate port
 pnpm dev:3010   # → http://localhost:3010
 ```
+
+### Option B — Docker (hides Node/native setup)
+
+Requires [Docker](https://docs.docker.com/get-docker/) + Docker Compose.
+
+```bash
+git clone https://github.com/arhamtalkstech/sigmadesign.git
+cd sigmadesign
+docker compose up --build
+```
+
+Open **http://localhost:3000**
+
+Library data persists in the Docker volume `sigmadesign-data` (not your host `~/.sigmadesign` unless you change the compose file).
+
+Stop with `Ctrl+C`, or run detached: `docker compose up --build -d`.
 
 ### First five minutes
 
@@ -86,12 +140,80 @@ More detail: **[docs/USAGE.md](./docs/USAGE.md)**
 
 ---
 
+## Agents (coding assistants)
+
+Local agents can read (and optionally edit) your library **without a third-party design-cloud token**.
+
+| | |
+| --- | --- |
+| **In the app** | Open **Agents** from the library header or editor top bar → **`/connect`** |
+| **On the machine** | From the repo root: `pnpm mcp` |
+| **Skill pack** | Download the implement skill zip from `/connect` |
+
+Setup instructions, tool list, and config snippets live on the **Agents** page — not on the design canvas.
+
+---
+
+## Troubleshooting
+
+### `pnpm install` fails on `better-sqlite3` / `node-gyp`
+
+- Confirm Node ≥ 20: `node -v`  
+- Install OS build tools (table above)  
+- Retry: `pnpm install`  
+- Nuclear option: delete `node_modules` and the pnpm store entry, then reinstall  
+- Or skip native host setup entirely: use **Docker** (`docker compose up --build`)
+
+### `pnpm: command not found`
+
+```bash
+corepack enable && corepack prepare pnpm@9.15.0 --activate
+```
+
+### Port 3000 already in use
+
+```bash
+pnpm dev:3010
+# or
+PORT=3001 pnpm dev
+```
+
+### App starts but library is empty
+
+Expected on first run. Import a `.fig` / `.sig`, or use **New blank file**.  
+Data directory: `~/.sigmadesign` (or `$SIGMADESIGN_HOME`).
+
+### Changes after import don’t stick / file looks empty after reload
+
+- Wait for status **Saved · N nodes** after edits  
+- Confirm you are opening the same library entry under `/file/{id}`  
+- Check disk space under `SIGMADESIGN_HOME`
+
+### Docker: page won’t load
+
+- Wait until logs show Next is ready  
+- Open `http://localhost:3000` (not only the container hostname)  
+- `docker compose logs -f` for build/runtime errors  
+
+### Typecheck / build fails after pull
+
+```bash
+pnpm install
+pnpm test
+pnpm build
+```
+
+Still stuck? Open an issue with OS, `node -v`, `pnpm -v`, and the full error log.
+
+---
+
 ## Routes
 
 | Path | Purpose |
 | --- | --- |
 | `/` | Library list only (never the canvas) |
 | `/file/{id}` | Editor for library file `id` |
+| `/connect` | Agents setup, tools, skill download |
 | `/?resume=1` | Reopen last file from SQLite |
 
 ---
@@ -115,11 +237,12 @@ Session state (viewport, page, selection, expanded layers) is saved while you wo
 ## Monorepo
 
 ```text
-apps/web                   Next.js app — UI + library API + canvas
+apps/web                   Next.js app — UI + library API + canvas + agent server
 packages/document-model    Scene graph types, transforms, authoring ops
 packages/fig-format        Design-archive ZIP + kiwi codec + path blobs
 packages/fig-import        Archive → ADM + instance expansion + path resolve
 docs/                      Usage, architecture, development, screenshots
+skills/                    Agent skill source (packaged to public zip)
 ```
 
 Deep dives:
@@ -156,7 +279,10 @@ Deep dives:
 | `pnpm test` | All package tests |
 | `pnpm typecheck` | TypeScript across workspace |
 | `pnpm build` | Production build |
+| `pnpm mcp` | Start local agent server (stdio) |
+| `pnpm skill:pack` | Rebuild skill zip for `/connect` download |
 | `pnpm fig:inspect` | CLI inspect a design archive |
+| `docker compose up --build` | Run via Docker |
 
 ---
 
@@ -196,7 +322,7 @@ Copy `.env.example` → `.env.local` if needed. **Never commit secrets.**
 pnpm test
 ```
 
-Includes document-model authoring tests, path/geometry regression, instance-swap icons, routes/brand, UI chrome, and `.sig` writeback round-trips.
+Includes document-model authoring tests, path/geometry regression, instance-swap icons, routes/brand, UI chrome, agent tool handlers, and `.sig` writeback round-trips.
 
 ---
 

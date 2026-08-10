@@ -47,6 +47,22 @@ When changing path paint tags, instance swaps, or layout rules: **bump `ADM_CACH
 2. Per-node: effects → fills (images + geometry) → strokes → children (optional clip).  
 3. Async image loads call `onImageLoad` → canvas rAF redraw.
 
+## Docker
+
+```bash
+docker compose up --build
+```
+
+Sets `SIGMADESIGN_HOME=/data/sigmadesign` inside the container (named volume). See root `Dockerfile` and `docker-compose.yml`.
+
+## Agents server
+
+```bash
+pnpm mcp
+```
+
+Handlers live in `apps/web/src/mcp/`. Browser-safe tool names: `apps/web/src/mcp/tool-catalog.ts`. Product UI: `/connect` (not the canvas).
+
 ## Testing
 
 ```bash
