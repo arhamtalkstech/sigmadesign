@@ -14,6 +14,7 @@ import {
   Type,
   PenTool,
   MessageSquare,
+  Image as ImageIcon,
   Folder,
   Group,
   LayoutTemplate,
@@ -75,6 +76,7 @@ export const TOOL_ICONS: Record<Tool, LucideIcon> = {
   ellipse: Circle,
   text: Type,
   pen: PenTool,
+  image: ImageIcon,
   comment: MessageSquare,
 };
 

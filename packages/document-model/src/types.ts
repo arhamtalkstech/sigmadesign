@@ -109,14 +109,27 @@ export interface CornerRadii {
   bottomLeft: number;
 }
 
+export type LayoutSizing = "FIXED" | "HUG" | "FILL" | string;
+export type ConstraintAxis = "MIN" | "CENTER" | "MAX" | "STRETCH" | "SCALE" | string;
+
+export interface LayoutConstraints {
+  horizontal: ConstraintAxis;
+  vertical: ConstraintAxis;
+}
+
 export interface AutoLayout {
   mode: "NONE" | "HORIZONTAL" | "VERTICAL" | string;
   gap: number;
   padding: { top: number; right: number; bottom: number; left: number };
   primaryAlign?: string;
   counterAlign?: string;
-  primarySizing?: string;
-  counterSizing?: string;
+  primarySizing?: LayoutSizing;
+  counterSizing?: LayoutSizing;
+  /**
+   * When true, SigmaDesign owns reflow for this container (user-created / edited).
+   * Imported Figma trees leave this unset so baked positions stay authoritative.
+   */
+  managed?: boolean;
 }
 
 export interface TextStyle {
@@ -205,8 +218,74 @@ export interface SceneNodeBase {
   /** Stack child grow factor (auto-layout) */
   layoutGrow?: number;
   layoutAlign?: string;
+  /** Child sizing inside auto-layout */
+  layoutSizingHorizontal?: LayoutSizing;
+  layoutSizingVertical?: LayoutSizing;
+  /** Frame constraints relative to parent (non-auto-layout) */
+  constraints?: LayoutConstraints;
+  /** Rotation in degrees (visual; transform matrix is source of truth when set) */
+  rotation?: number;
+  /** Style ids applied to this node */
+  fillStyleId?: string;
+  strokeStyleId?: string;
+  textStyleId?: string;
+  effectStyleId?: string;
+  /** Bound design variable ids (resolved via active mode) */
+  fillVariableId?: string;
+  strokeVariableId?: string;
+  opacityVariableId?: string;
+  /** BOOLEAN_OPERATION only */
+  booleanOperation?: "UNION" | "SUBTRACT" | "INTERSECT" | "EXCLUDE" | string;
   /** Unmapped Figma fields for round-trip fidelity */
   _figma?: Record<string, unknown>;
+}
+
+/** Canvas / design comment pin (authoring + import) */
+export interface DocumentComment {
+  id: string;
+  /** World-space position on the page */
+  x: number;
+  y: number;
+  message: string;
+  author?: string;
+  createdAt: number;
+  resolved?: boolean;
+  /** Optional linked node */
+  nodeId?: NodeId;
+  pageId?: NodeId;
+  /** Thread replies */
+  replies?: Array<{
+    id: string;
+    message: string;
+    author?: string;
+    createdAt: number;
+  }>;
+}
+
+/** Shared paint / text / effect style library entry */
+export interface DesignStyle {
+  id: string;
+  name: string;
+  kind: "FILL" | "STROKE" | "TEXT" | "EFFECT";
+  paints?: Paint[];
+  textStyle?: TextStyle;
+  effects?: Effect[];
+}
+
+/** Design variable (token) */
+export interface DesignVariable {
+  id: string;
+  name: string;
+  resolvedType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN";
+  valuesByMode: Record<string, Color | number | string | boolean>;
+  defaultModeId: string;
+}
+
+export interface VariableCollection {
+  id: string;
+  name: string;
+  modes: Array<{ id: string; name: string }>;
+  variableIds: string[];
 }
 
 export interface TextNode extends SceneNodeBase {
@@ -268,7 +347,16 @@ export interface AlteronDocument {
   assets: Record<string, { hash: string; mimeType: string; dataUrl?: string; byteLength: number }>;
   /** Cached kiwi schema from last .fig import (base64) for clipboard */
   figmaSchemaBase64?: string;
-  components: Record<NodeId, { id: NodeId; name: string; key?: string }>;
+  components: Record<NodeId, { id: NodeId; name: string; key?: string; variantGroupId?: string }>;
+  /** Shared styles (fills, text, effects) */
+  styles?: Record<string, DesignStyle>;
+  /** Design tokens / variables */
+  variables?: Record<string, DesignVariable>;
+  variableCollections?: Record<string, VariableCollection>;
+  /** Active variable mode per collection */
+  activeModes?: Record<string, string>;
+  /** Design comments / pins */
+  comments?: Record<string, DocumentComment>;
 }
 
 export function identityMat(): Mat2D {
@@ -296,6 +384,27 @@ export function createEmptyDocument(name = "Untitled"): AlteronDocument {
     currentPageId: pageId,
     assets: {},
     components: {},
+    styles: {},
+    variables: {},
+    variableCollections: {},
+    activeModes: {},
+    comments: {},
   };
   return doc;
+}
+
+/** Default solid paint helper */
+export function solidPaint(
+  r: number,
+  g: number,
+  b: number,
+  a = 1
+): SolidPaint {
+  return {
+    type: "SOLID",
+    color: { r, g, b, a },
+    opacity: 1,
+    visible: true,
+    blendMode: "NORMAL",
+  };
 }

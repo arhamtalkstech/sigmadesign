@@ -1,5 +1,7 @@
 import {
   finalizeLayout,
+  mergeImportedComments,
+  commentsFromImportPayload,
   type AlteronDocument,
   type Color,
   type NodeId,
@@ -177,7 +179,7 @@ export function decodedFigToDocument(decoded: DecodedFigFile): AlteronDocument {
     };
   }
 
-  const doc: AlteronDocument = {
+  let doc: AlteronDocument = {
     version: 1,
     name: decoded.meta.file_name ?? "Imported",
     meta: {
@@ -193,7 +195,19 @@ export function decodedFigToDocument(decoded: DecodedFigFile): AlteronDocument {
     assets,
     figmaSchemaBase64: bytesToBase64(decoded.schemaBytes),
     components,
+    comments: {},
   };
+
+  // Comments when present in kiwi message (tolerant; often empty for .fig exports)
+  try {
+    const imported = commentsFromImportPayload(
+      decoded.message as unknown as Record<string, unknown>,
+      currentPageId
+    );
+    doc = mergeImportedComments(doc, imported);
+  } catch {
+    /* ignore malformed comment payloads */
+  }
 
   // Absolute transforms + clamp oversized instance children (auto-layout)
   if (currentPageId) {

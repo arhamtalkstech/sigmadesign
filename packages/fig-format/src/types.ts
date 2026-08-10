@@ -112,6 +112,9 @@ export interface FigMessage {
   type?: string;
   nodeChanges?: FigNodeChange[];
   blobs?: FigBlob[];
+  /** Present on some exports; imported into ADM comments when available */
+  comments?: unknown[];
+  commentData?: unknown[];
   pasteID?: number;
   pasteFileKey?: string;
   pastePageId?: FigGuid;
@@ -157,4 +160,6 @@ export interface ClipboardFigPayload {
   meta: Record<string, unknown>;
   message: FigMessage;
   schemaBytes?: Uint8Array;
+  /** Image bytes keyed by SHA-1 hex (when clipboard embeds them). */
+  images?: Map<string, Uint8Array>;
 }

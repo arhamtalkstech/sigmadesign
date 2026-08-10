@@ -84,6 +84,44 @@ export async function saveLibrarySession(
   });
 }
 
+/**
+ * Persist full document content (auto-save after paste / edits).
+ *
+ * Chrome/Safari limit `keepalive` request bodies to ~64KB. Pasted design
+ * documents are almost always larger, which surfaces as TypeError: Failed to
+ * fetch. Only use keepalive for small session-style flushes; large saves use a
+ * normal fetch so the full body is accepted.
+ */
+export async function saveLibraryDocument(
+  id: string,
+  doc: import("@alteron/document-model").AlteronDocument
+): Promise<{ ok: boolean; nodeCount?: number; savedAt?: number }> {
+  const body = JSON.stringify({ doc });
+  // Chromium keepalive body limit is 64 KiB — stay under with margin
+  const useKeepalive = body.length < 56_000;
+  let res: Response;
+  try {
+    res = await fetch(`/api/library/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body,
+      ...(useKeepalive ? { keepalive: true } : {}),
+    });
+  } catch (err) {
+    const mb = (body.length / (1024 * 1024)).toFixed(2);
+    const reason =
+      err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Document save failed (${reason}; payload ${mb} MB). Is the dev server running?`
+    );
+  }
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error || `Document save failed (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
 export async function deleteLibraryFile(id: string) {
   const res = await fetch(`/api/library/${id}`, { method: "DELETE" });
   if (!res.ok) {

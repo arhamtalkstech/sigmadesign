@@ -41,16 +41,16 @@ import {
   getSigmaHome,
   sigPathForId,
 } from "./paths";
+import {
+  BLANK_SIG_MAGIC,
+  isAdmSigFile,
+  readAdmSigDocument,
+  writeAdmSigDocument,
+} from "./sig-format";
 
-/** Magic prefix for blank library files (ADM lives in cache; not a full archive). */
-const BLANK_SIG_MAGIC = Buffer.from("SIGMABLANK\n", "utf8");
-
-function isBlankSigFile(bytes: Buffer): boolean {
-  return (
-    bytes.length >= BLANK_SIG_MAGIC.length &&
-    bytes.subarray(0, BLANK_SIG_MAGIC.length).equals(BLANK_SIG_MAGIC)
-  );
-}
+const isBlankSigFile = isAdmSigFile;
+const readBlankSigDocument = readAdmSigDocument;
+const writeBlankSigDocument = writeAdmSigDocument;
 
 export type LibraryListItem = {
   id: string;
@@ -280,25 +280,31 @@ export async function openLibraryFile(id: string): Promise<OpenLibraryResult> {
   }
 
   const mtimeMs = statSync(path).mtimeMs;
-  let fromCache = true;
-  let doc = readCache(id, mtimeMs);
-  if (!doc) {
-    fromCache = false;
-    const bytes = readFileSync(path);
-    if (isBlankSigFile(bytes) || row.notes === "blank") {
-      doc = createEmptyDocument(row.name);
-      doc.meta = { ...doc.meta, source: "blank" };
+  const bytes = readFileSync(path);
+  let fromCache = false;
+  let doc: AlteronDocument;
+
+  // Magic SIGMABLANK = self-contained ADM writeback (edits survive without cache)
+  if (isBlankSigFile(bytes)) {
+    doc = readBlankSigDocument(bytes, row.name);
+  } else {
+    const cached = readCache(id, mtimeMs);
+    if (cached) {
+      doc = cached;
+      fromCache = true;
     } else {
       doc = await importFigFile(bytes);
     }
-    doc.name = row.name;
-    writeCache(id, doc, mtimeMs);
-    memoryDocCache.set(id, {
-      mtimeMs,
-      version: ADM_CACHE_VERSION,
-      doc,
-    });
   }
+  doc.name = row.name;
+  if (!fromCache) {
+    writeCache(id, doc, mtimeMs);
+  }
+  memoryDocCache.set(id, {
+    mtimeMs,
+    version: ADM_CACHE_VERSION,
+    doc,
+  });
 
   // Restore page if saved
   if (row.current_page_id && doc.pages.some((p) => p.id === row.current_page_id)) {
@@ -348,6 +354,54 @@ export function saveLibrarySession(
   }
 ) {
   updateSessionState(id, state);
+}
+
+/**
+ * Persist full document content for a library file (auto-save after paste/edits).
+ * Always writes a self-contained SIGMABLANK + ADM JSON `.sig` so reopening does
+ * not depend solely on the ADM cache (works for blank and formerly-imported files).
+ */
+export function saveLibraryDocument(
+  id: string,
+  doc: AlteronDocument
+): { ok: true; nodeCount: number; savedAt: number } {
+  ensureSigmaDirs();
+  const row = getLibraryFile(id);
+  if (!row) throw new Error(`File not found in library: ${id}`);
+
+  const path = join(getLibraryDir(), row.filename);
+  if (!existsSync(path)) {
+    throw new Error(`Missing library file on disk: ${path}`);
+  }
+
+  const payloadDoc = { ...doc, name: row.name };
+  const mtimeMs = writeBlankSigDocument(path, payloadDoc);
+
+  writeCache(id, payloadDoc, mtimeMs);
+  memoryDocCache.set(id, {
+    mtimeMs,
+    version: ADM_CACHE_VERSION,
+    doc: payloadDoc,
+  });
+
+  const byteSize = statSync(path).size;
+  upsertLibraryFile({
+    ...row,
+    node_count: Object.keys(doc.nodes).length,
+    page_count: doc.pages.length,
+    byte_size: byteSize,
+    cache_mtime_ms: mtimeMs,
+    current_page_id: doc.currentPageId,
+    // After first save, library entry is always self-contained ADM
+    notes: row.notes === "blank" ? "blank" : "edited-adm",
+    source_format: row.source_format || "sig",
+  });
+
+  return {
+    ok: true,
+    nodeCount: Object.keys(doc.nodes).length,
+    savedAt: Date.now(),
+  };
 }
 
 export function removeLibraryFile(id: string): boolean {

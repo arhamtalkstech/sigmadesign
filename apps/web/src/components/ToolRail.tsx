@@ -11,6 +11,7 @@ const TOOLS: Array<{ id: Tool; label: string; shortcut: string }> = [
   { id: "ellipse", label: "Ellipse", shortcut: "O" },
   { id: "text", label: "Text", shortcut: "T" },
   { id: "pen", label: "Pen", shortcut: "P" },
+  { id: "image", label: "Image", shortcut: "I" },
   { id: "comment", label: "Comment", shortcut: "C" },
 ];
 

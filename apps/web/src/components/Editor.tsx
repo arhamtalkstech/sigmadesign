@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TopBar } from "./TopBar";
 import { ToolRail } from "./ToolRail";
 import { LayersPanel } from "./LayersPanel";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { Canvas } from "./Canvas";
+import { PasteWarningModal } from "./PasteWarningModal";
+import { importFileToLibrary, saveLibraryDocument } from "@/lib/library-api";
 import { useDocumentStore } from "@/store/document-store";
 
 type Props = {
@@ -24,10 +26,18 @@ export function Editor({ fileId }: Props) {
   const loading = useDocumentStore((s) => s.loading);
   const libraryFileId = useDocumentStore((s) => s.libraryFileId);
   const status = useDocumentStore((s) => s.status);
+  const pasteWarning = useDocumentStore((s) => s.pasteWarning);
+  const selection = useDocumentStore((s) => s.selection);
+  const selectedCommentId = useDocumentStore((s) => s.selectedCommentId);
+  const designPanelOpen =
+    selection.length > 0 || Boolean(selectedCommentId);
   const openFromLibrary = useDocumentStore((s) => s.openFromLibrary);
   const setStatus = useDocumentStore((s) => s.setStatus);
   const focusNode = useDocumentStore((s) => s.focusNode);
+  const confirmPartialPaste = useDocumentStore((s) => s.confirmPartialPaste);
+  const cancelPasteWarning = useDocumentStore((s) => s.cancelPasteWarning);
   const focusedOnce = useRef<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   // Load file when route id changes
   useEffect(() => {
@@ -38,10 +48,17 @@ export function Editor({ fileId }: Props) {
     ) {
       return;
     }
+    // Show center loader immediately (before async open) so empty-canvas
+    // hint never flashes while the file is still loading.
+    useDocumentStore.setState({
+      loading: true,
+      status: "Opening file…",
+    });
     void (async () => {
       try {
         await openFromLibrary(fileId);
       } catch {
+        useDocumentStore.setState({ loading: false });
         setStatus(`Could not open file ${fileId}`);
         router.replace("/");
       }
@@ -87,12 +104,51 @@ export function Editor({ fileId }: Props) {
     };
   }, []);
 
-  // Persist session on unload
+  // Persist session + document on unload (paste/edits must not be lost)
   useEffect(() => {
-    const onLeave = () => useDocumentStore.getState().persistSession();
-    window.addEventListener("beforeunload", onLeave);
-    return () => window.removeEventListener("beforeunload", onLeave);
+    const flush = () => {
+      const s = useDocumentStore.getState();
+      s.persistSession();
+      // Immediate document save (bypass debounce) when leaving the page
+      if (s.libraryFileId) {
+        void saveLibraryDocument(s.libraryFileId, s.doc).catch(() => {
+          /* non-fatal on unload */
+        });
+      }
+    };
+    window.addEventListener("beforeunload", flush);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      window.removeEventListener("pagehide", flush);
+    };
   }, []);
+
+  const onPasteAnyway = useCallback(() => {
+    void confirmPartialPaste();
+  }, [confirmPartialPaste]);
+
+  const onImportInstead = useCallback(() => {
+    cancelPasteWarning();
+    // Prefer native file picker so user can drop a full .fig with images
+    importInputRef.current?.click();
+  }, [cancelPasteWarning]);
+
+  const onImportFile = useCallback(
+    async (file: File | undefined) => {
+      if (!file) return;
+      setStatus(`Importing ${file.name}…`);
+      try {
+        const item = await importFileToLibrary(file);
+        router.push(`/file/${item.id}`);
+      } catch (e) {
+        setStatus(
+          `Import failed: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
+    },
+    [router, setStatus]
+  );
 
   return (
     <div className="app-shell">
@@ -111,14 +167,41 @@ export function Editor({ fileId }: Props) {
           </div>
         )}
       </div>
-      <div className="workspace">
+      <div
+        className={
+          designPanelOpen ? "workspace" : "workspace workspace-props-collapsed"
+        }
+      >
         <ToolRail />
         <LayersPanel />
         <main id="canvas-main" className="canvas-main" tabIndex={-1}>
           <Canvas />
         </main>
-        <PropertiesPanel />
+        {designPanelOpen ? <PropertiesPanel /> : null}
       </div>
+
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".fig,.sig,application/zip,application/octet-stream"
+        className="sigma-visually-hidden"
+        tabIndex={-1}
+        aria-hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          void onImportFile(f);
+        }}
+      />
+
+      {pasteWarning && (
+        <PasteWarningModal
+          warning={pasteWarning}
+          onPasteAnyway={onPasteAnyway}
+          onImportInstead={onImportInstead}
+          onCancel={cancelPasteWarning}
+        />
+      )}
     </div>
   );
 }

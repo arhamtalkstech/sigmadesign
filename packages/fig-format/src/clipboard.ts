@@ -4,7 +4,9 @@ import {
   decodeMessage,
   decompressData,
 } from "./archive.js";
+import { extractImagesFromMessage } from "./images.js";
 import type { ClipboardFigPayload, FigMessage } from "./types.js";
+import { unpackFigFile } from "./zip.js";
 
 const META_START = "<!--(figmeta)";
 const META_END = "(/figmeta)-->";
@@ -70,6 +72,7 @@ export function decodeFigmaClipboard(
   const { meta, figmaBytes } = extracted;
 
   // Full fig-kiwi archive in clipboard
+  // (ZIP clipboards are handled by decodeFigmaClipboardAsync)
   if (
     figmaBytes.length >= 8 &&
     String.fromCharCode(...figmaBytes.subarray(0, 8)) === "fig-kiwi"
@@ -79,10 +82,12 @@ export function decodeFigmaClipboard(
       decoded.compiledSchema,
       decoded.dataBytes
     ) as FigMessage;
+    const images = extractImagesFromMessage(message);
     return {
       meta,
       message,
       schemaBytes: decoded.schemaBytes,
+      images,
     };
   }
 
@@ -104,7 +109,45 @@ export function decodeFigmaClipboard(
   }
 
   const message = decodeMessage(compiled, dataBytes) as FigMessage;
-  return { meta, message, schemaBytes };
+  const images = extractImagesFromMessage(message);
+  return { meta, message, schemaBytes, images };
+}
+
+/**
+ * Async clipboard decode that also accepts a full .fig ZIP payload (with images/).
+ */
+export async function decodeFigmaClipboardAsync(
+  html: string,
+  schemaBytes?: Uint8Array
+): Promise<ClipboardFigPayload> {
+  const extracted = extractFigmaClipboardHtml(html);
+  if (!extracted) {
+    throw new Error("HTML does not contain Figma clipboard markers");
+  }
+  const { meta, figmaBytes } = extracted;
+
+  // Full .fig ZIP in clipboard
+  if (figmaBytes.length >= 4 && figmaBytes[0] === 0x50 && figmaBytes[1] === 0x4b) {
+    const unpacked = await unpackFigFile(figmaBytes);
+    const decoded = decodeFigKiwiBuffer(unpacked.canvas);
+    const message = decodeMessage(
+      decoded.compiledSchema,
+      decoded.dataBytes
+    ) as FigMessage;
+    const fromBlobs = extractImagesFromMessage(message);
+    const images = new Map(unpacked.images);
+    for (const [k, v] of fromBlobs) {
+      if (!images.has(k)) images.set(k, v);
+    }
+    return {
+      meta,
+      message,
+      schemaBytes: decoded.schemaBytes,
+      images,
+    };
+  }
+
+  return decodeFigmaClipboard(html, schemaBytes);
 }
 
 export function composeFigmaClipboardHtml(

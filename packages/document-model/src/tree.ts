@@ -160,11 +160,14 @@ export function updateNode(
 ): AlteronDocument {
   const existing = doc.nodes[id];
   if (!existing) return doc;
+  // Allow explicit type changes (e.g. promote FRAME/RECTANGLE → COMPONENT)
+  // while defaulting to the existing type when patch omits it.
+  const nextType = patch.type ?? existing.type;
   return {
     ...doc,
     nodes: {
       ...doc.nodes,
-      [id]: { ...existing, ...patch, id: existing.id, type: existing.type } as SceneNode,
+      [id]: { ...existing, ...patch, id: existing.id, type: nextType } as SceneNode,
     },
   };
 }

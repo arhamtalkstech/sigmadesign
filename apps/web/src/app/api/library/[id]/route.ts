@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { AlteronDocument } from "@alteron/document-model";
 import {
   openLibraryFile,
   removeLibraryFile,
   renameLibraryFile,
+  saveLibraryDocument,
   saveLibrarySession,
 } from "@/server/library-service";
 
@@ -26,7 +28,10 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   }
 }
 
-/** PATCH — session state (viewport, page, selection) or rename */
+/**
+ * PATCH — session state, rename, and/or full document auto-save.
+ * Body may include viewport/selection (session), name (rename), and/or doc (ADM).
+ */
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
@@ -36,6 +41,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       expanded?: string[];
       selection?: string[];
       name?: string;
+      /** Full document snapshot for auto-save after paste/edits */
+      doc?: AlteronDocument;
     };
     if (body.name) {
       const file = renameLibraryFile(id, body.name);
@@ -44,8 +51,22 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       }
       return NextResponse.json({ ok: true, file });
     }
-    saveLibrarySession(id, body);
-    return NextResponse.json({ ok: true });
+
+    let saved: { ok: true; nodeCount: number; savedAt: number } | undefined;
+    if (body.doc?.nodes && body.doc?.pages) {
+      saved = saveLibraryDocument(id, body.doc);
+    }
+
+    if (
+      body.viewport ||
+      body.currentPageId !== undefined ||
+      body.expanded ||
+      body.selection
+    ) {
+      saveLibrarySession(id, body);
+    }
+
+    return NextResponse.json({ ok: true, saved });
   } catch (err) {
     console.error(err);
     return NextResponse.json(

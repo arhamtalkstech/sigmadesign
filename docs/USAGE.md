@@ -54,9 +54,13 @@ Data lives on your machine only (`SIGMADESIGN_HOME` overrides the default `~/.si
 - **Zoom** — pinch / ctrl+wheel  
 - **Select** — click a layer; selection outline appears  
 
-### Session memory
+### Auto-save
 
-Viewport, page, selection, and expanded layers are written to SQLite while you work, so reopening `/file/{id}` restores context.
+- **Document content** (pastes, renames, moves, creates, deletes) is saved to the library within ~1s. Status shows `Saved · N nodes`.  
+- Blank files store content as JSON inside the `.sig` marker file so reloads keep pastes.  
+- **Session** (viewport, page, selection, expanded layers) is also stored in SQLite.  
+
+If you reloaded after paste *before* this fix, that paste was only in memory and is gone — paste again and wait for **Saved**.
 
 ## File formats
 

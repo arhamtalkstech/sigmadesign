@@ -2,24 +2,58 @@
 
 import { create } from "zustand";
 import {
+  addVariableMode,
+  alignNodes,
+  applyBooleanOperation,
+  applyColorVariableAsFill,
+  applyFillStyle,
   computeAbsoluteTransforms,
+  createColorVariable,
+  createComment,
+  createComponentFromNode,
   createEmptyDocument,
+  createFillStyle,
+  createInstanceOf,
+  createShapeInDocument,
+  createVectorFromPoints,
+  deleteComment,
+  deleteVectorPoint,
   finalizeLayout,
   hitTest,
-  identityMat,
+  insertVectorPoint,
+  moveVectorPoint,
+  placeImageAsset,
+  resizeNodeByHandle,
+  resolveComment,
+  rotateNode,
+  setActiveMode,
+  setAutoLayout,
+  setVectorClosed,
+  swapInstanceComponent,
+  updateCommentMessage,
+  applyNodePatch,
   updateNode,
+  updateNodeRect,
+  type AlignMode,
   type AlteronDocument,
+  type AutoLayout,
+  type BooleanKind,
+  type CreateShapeType,
   type NodeId,
+  type ResizeHandle,
   type SceneNode,
+  type Vec2,
 } from "@alteron/document-model";
 import { importFigFile, decodedFigToDocument } from "@alteron/fig-import";
 import {
-  decodeFigmaClipboard,
+  collectReferencedImageHashes,
+  decodeFigmaClipboardAsync,
   isFigmaClipboardHtml,
 } from "@alteron/fig-format";
 import {
   importFileToLibrary,
   openLibraryFile,
+  saveLibraryDocument,
   saveLibrarySession,
 } from "@/lib/library-api";
 import {
@@ -35,6 +69,7 @@ export type Tool =
   | "ellipse"
   | "text"
   | "pen"
+  | "image"
   | "comment";
 
 interface Viewport {
@@ -46,6 +81,25 @@ interface Viewport {
 interface HistoryEntry {
   doc: AlteronDocument;
 }
+
+/** Pending paste that would drop image fills (or other non-clipboard assets). */
+export type PasteWarning = {
+  html: string;
+  /** IMAGE fills that reference hashes with no bytes in the clipboard */
+  missingImages: number;
+  /** Image assets we could extract from the clipboard */
+  availableImages: number;
+  /** Rough node count in the clipboard payload */
+  nodeCount: number;
+};
+
+export type PasteDesignOptions = {
+  /**
+   * Skip the partial-paste confirmation modal and apply structure even when
+   * image bytes are missing from the clipboard.
+   */
+  acceptPartial?: boolean;
+};
 
 interface DocumentState {
   doc: AlteronDocument;
@@ -59,6 +113,13 @@ interface DocumentState {
   future: HistoryEntry[];
   /** Active library file id (SQLite + ~/.sigmadesign) */
   libraryFileId: string | null;
+  /**
+   * When set, clipboard paste would drop images (or similar assets).
+   * UI shows a modal: paste structure anyway vs import .fig.
+   */
+  pasteWarning: PasteWarning | null;
+  /** Active comment pin selection (comment tool / panel) */
+  selectedCommentId: string | null;
 
   setTool: (tool: Tool) => void;
   setViewport: (v: Partial<Viewport>) => void;
@@ -76,10 +137,19 @@ interface DocumentState {
   importToLibraryAndOpen: (file: File) => Promise<string>;
   /** Open existing library file by id (uses ADM cache when available) */
   openFromLibrary: (id: string) => Promise<void>;
-  /** Debounced session persist to SQLite */
+  /** Debounced session persist to SQLite (viewport, selection — not content) */
   persistSession: () => void;
+  /** Debounced full document auto-save to library (paste, edits, rename) */
+  persistDocument: () => void;
   /** Paste design clipboard HTML (format interop; marker not user-facing) */
-  pasteDesignHtml: (html: string) => Promise<void>;
+  pasteDesignHtml: (
+    html: string,
+    options?: PasteDesignOptions
+  ) => Promise<void>;
+  /** User chose “Paste structure only” on the warning modal */
+  confirmPartialPaste: () => Promise<void>;
+  /** Dismiss paste warning without pasting */
+  cancelPasteWarning: () => void;
   newDocument: () => void;
   focusNode: (nodeId: NodeId, canvasW?: number, canvasH?: number) => void;
 
@@ -93,6 +163,68 @@ interface DocumentState {
     worldX: number,
     worldY: number
   ) => void;
+  /** Drag-create: start shape at point with minimal size */
+  beginCreateShape: (
+    type: CreateShapeType,
+    worldX: number,
+    worldY: number
+  ) => NodeId | null;
+  updateCreateShape: (
+    id: NodeId,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number
+  ) => void;
+  resizeSelected: (
+    handle: ResizeHandle,
+    worldX: number,
+    worldY: number,
+    opts?: { keepAspect?: boolean }
+  ) => void;
+  rotateSelected: (degrees: number) => void;
+  alignSelection: (mode: AlignMode) => void;
+  setSelectionAutoLayout: (patch: Partial<AutoLayout>) => void;
+  booleanSelection: (op: BooleanKind) => void;
+  createComponentFromSelection: () => void;
+  instantiateSelectedComponent: () => void;
+  swapSelectedInstance: (componentId: NodeId) => void;
+  createStyleFromSelection: (name: string) => void;
+  applyStyleToSelection: (styleId: string) => void;
+  createVariableFromSelection: (name: string) => void;
+  applyVariableToSelection: (variableId: string) => void;
+  placeImage: (
+    dataUrl: string,
+    mimeType: string,
+    worldX: number,
+    worldY: number,
+    width: number,
+    height: number,
+    name?: string
+  ) => void;
+  commitPenPath: (points: Vec2[], closed?: boolean) => void;
+  addCommentAt: (x: number, y: number, message: string) => void;
+  resolveSelectedComment: (commentId: string, resolved?: boolean) => void;
+  updateSelectedComment: (commentId: string, message: string) => void;
+  deleteSelectedComment: (commentId: string) => void;
+  setVariableMode: (collectionId: string, modeId: string) => void;
+  addModeToCollection: (collectionId: string, name: string) => void;
+  moveVectorPointAt: (
+    id: NodeId,
+    index: number,
+    local: Vec2,
+    closed?: boolean
+  ) => void;
+  insertVectorPointAt: (
+    id: NodeId,
+    afterIndex: number,
+    local: Vec2,
+    closed?: boolean
+  ) => void;
+  deleteVectorPointAt: (id: NodeId, index: number, closed?: boolean) => void;
+  setVectorPathClosed: (id: NodeId, closed: boolean) => void;
+  selectedCommentId: string | null;
+  setSelectedCommentId: (id: string | null) => void;
   loadDocument: (doc: AlteronDocument) => void;
   undo: () => void;
   redo: () => void;
@@ -112,6 +244,7 @@ interface DocumentState {
 
 let localIdCounter = 100000;
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
+let docSaveTimer: ReturnType<typeof setTimeout> | null = null;
 /** Last kiwi schema seen this session — used when pasting into blank files. */
 let sessionSchemaCache: Uint8Array | undefined;
 
@@ -151,8 +284,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   past: [],
   future: [],
   libraryFileId: null,
+  pasteWarning: null,
+  selectedCommentId: null,
 
   setTool: (tool) => set({ tool }),
+  setSelectedCommentId: (id) => set({ selectedCommentId: id }),
   setViewport: (v) => {
     set((s) => {
       const next = { ...s.viewport, ...v };
@@ -241,6 +377,32 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         /* offline / server restart — non-fatal */
       });
     }, 400);
+  },
+
+  persistDocument: () => {
+    const { libraryFileId, doc } = get();
+    if (!libraryFileId) return;
+    if (docSaveTimer) clearTimeout(docSaveTimer);
+    docSaveTimer = setTimeout(() => {
+      const { libraryFileId: id, doc: snapshot } = get();
+      if (!id) return;
+      void saveLibraryDocument(id, snapshot)
+        .then((r) => {
+          if (r.ok) {
+            set({
+              status: `Saved · ${Object.keys(snapshot.nodes).length.toLocaleString()} nodes`,
+            });
+          }
+        })
+        .catch((err) => {
+          console.error("[sigmadesign] auto-save failed", err);
+          set({
+            status: `Auto-save failed: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          });
+        });
+    }, 600);
   },
 
   openFromLibrary: async (id) => {
@@ -390,7 +552,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }
   },
 
-  pasteDesignHtml: async (html) => {
+  pasteDesignHtml: async (html, options) => {
     if (!isFigmaClipboardHtml(html)) {
       set({
         status:
@@ -398,7 +560,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       });
       return;
     }
-    set({ loading: true, status: "Pasting clipboard…" });
+    set({ loading: true, status: "Reading clipboard…", pasteWarning: null });
     try {
       const { doc } = get();
       let schemaBytes: Uint8Array | undefined;
@@ -411,10 +573,34 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         schemaBytes = sessionSchemaCache;
       }
 
-      const payload = decodeFigmaClipboard(html, schemaBytes);
+      // Async decode supports full .fig ZIP clipboards + image-blob extraction
+      const payload = await decodeFigmaClipboardAsync(html, schemaBytes);
       if (payload.schemaBytes?.length) {
         sessionSchemaCache = payload.schemaBytes;
       }
+
+      const images = payload.images ?? new Map<string, Uint8Array>();
+      const referenced = collectReferencedImageHashes(payload.message);
+      const availableImages = images.size;
+      // Hashes referenced by IMAGE fills that have no bytes in this payload
+      const missingImages = [...referenced].filter((h) => !images.has(h)).length;
+      const nodeCount = payload.message.nodeChanges?.length ?? 0;
+
+      // Incomplete clipboard: ask before applying structure-only paste
+      if (missingImages > 0 && !options?.acceptPartial) {
+        set({
+          loading: false,
+          pasteWarning: {
+            html,
+            missingImages,
+            availableImages,
+            nodeCount,
+          },
+          status: `Clipboard has ${missingImages} image(s) that cannot be pasted`,
+        });
+        return;
+      }
+
       const synthetic = {
         header: { prelude: "fig-kiwi", version: 0 },
         meta: {
@@ -426,9 +612,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         message: payload.message,
         schemaBytes: payload.schemaBytes ?? schemaBytes ?? new Uint8Array(),
         compiledSchema: null,
-        images: new Map(),
+        images,
       };
 
+      set({ status: "Pasting clipboard…" });
       const pastedDoc = decodedFigToDocument(synthetic as never);
 
       get().pushHistory();
@@ -456,29 +643,76 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         }
       }
 
+      // Merge assets (images) + components from paste into the open document
+      const assets = { ...current.assets, ...pastedDoc.assets };
+      const components = { ...current.components, ...pastedDoc.components };
+
+      // Safe base64 for large schemas (spread into btoa blows the call stack)
+      let figmaSchemaBase64 = current.figmaSchemaBase64;
+      if (payload.schemaBytes?.length) {
+        const sb = payload.schemaBytes;
+        let binary = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < sb.length; i += chunk) {
+          binary += String.fromCharCode(...sb.subarray(i, i + chunk));
+        }
+        figmaSchemaBase64 = btoa(binary);
+      }
+
       const next: AlteronDocument = {
         ...current,
         nodes: mergedNodes,
         pages,
-        figmaSchemaBase64: payload.schemaBytes
-          ? btoa(String.fromCharCode(...payload.schemaBytes))
-          : current.figmaSchemaBase64,
+        assets,
+        components,
+        figmaSchemaBase64,
       };
       computeAbsoluteTransforms(next, pageId);
+
+      const imageCount = Object.keys(pastedDoc.assets).filter(
+        (h) => pastedDoc.assets[h]?.dataUrl
+      ).length;
+      const stillMissing = [...referenced].filter((h) => !assets[h]?.dataUrl)
+        .length;
+      const imgNote =
+        imageCount > 0
+          ? ` · ${imageCount} image(s)`
+          : stillMissing > 0
+            ? ` · ${stillMissing} image fill(s) without bytes`
+            : "";
 
       set({
         doc: next,
         selection: newChildIds,
         loading: false,
-        status: `Pasted ${newChildIds.length} root node(s)`,
+        pasteWarning: null,
+        status: `Pasted ${newChildIds.length} root node(s)${imgNote} · saving…`,
       });
+      // Auto-save document content (session-only persist would lose paste on reload)
+      get().persistDocument();
+      get().persistSession();
     } catch (err) {
       console.error(err);
       set({
         loading: false,
+        pasteWarning: null,
         status: `Paste failed: ${err instanceof Error ? err.message : String(err)}`,
       });
     }
+  },
+
+  confirmPartialPaste: async () => {
+    const warning = get().pasteWarning;
+    if (!warning) return;
+    set({ pasteWarning: null });
+    await get().pasteDesignHtml(warning.html, { acceptPartial: true });
+  },
+
+  cancelPasteWarning: () => {
+    set({
+      pasteWarning: null,
+      status: "Paste cancelled",
+    });
   },
 
   loadDocument: (doc) => {
@@ -535,98 +769,339 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   createNodeAt: (type, worldX, worldY) => {
-    const { doc } = get();
-    const pageId = doc.currentPageId;
-    if (!pageId) return;
     get().pushHistory();
-    const id = `local:${++localIdCounter}`;
-    const size =
-      type === "TEXT"
-        ? { width: 200, height: 24 }
-        : type === "FRAME"
-          ? { width: 400, height: 300 }
-          : { width: 100, height: 100 };
-
-    const node: SceneNode = {
-      id,
+    const w =
+      type === "TEXT" ? 200 : type === "FRAME" ? 400 : 100;
+    const h =
+      type === "TEXT" ? 24 : type === "FRAME" ? 300 : 100;
+    const { doc, id } = createShapeInDocument(
+      get().doc,
       type,
-      name:
-        type === "FRAME"
-          ? "Frame"
-          : type === "RECTANGLE"
-            ? "Rectangle"
-            : type === "ELLIPSE"
-              ? "Ellipse"
-              : "Text",
-      parentId: pageId,
-      children: [],
-      visible: true,
-      locked: false,
-      opacity: 1,
-      blendMode: "PASS_THROUGH",
-      transform: { ...identityMat(), m02: worldX, m12: worldY },
-      size,
-      fills:
-        type === "FRAME"
-          ? [
-              {
-                type: "SOLID",
-                color: { r: 1, g: 1, b: 1, a: 1 },
-                opacity: 1,
-                visible: true,
-                blendMode: "NORMAL",
-              },
-            ]
-          : type === "TEXT"
-            ? [
-                {
-                  type: "SOLID",
-                  color: { r: 1, g: 1, b: 1, a: 1 },
-                  opacity: 1,
-                  visible: true,
-                  blendMode: "NORMAL",
-                },
-              ]
-            : [
-                {
-                  type: "SOLID",
-                  color: { r: 0.85, g: 0.85, b: 0.9, a: 1 },
-                  opacity: 1,
-                  visible: true,
-                  blendMode: "NORMAL",
-                },
-              ],
-      strokes: [],
-      strokeWeight: 0,
-      strokeAlign: "INSIDE",
-      effects: [],
-      ...(type === "TEXT"
-        ? {
-            type: "TEXT" as const,
-            characters: "Text",
-            textStyle: {
-              fontFamily: "Inter",
-              fontStyle: "Regular",
-              fontSize: 16,
-            },
-          }
-        : {}),
-    } as SceneNode;
-
-    const pages = doc.pages.map((p) =>
-      p.id === pageId ? { ...p, children: [...p.children, id] } : p
+      worldX,
+      worldY,
+      w,
+      h
     );
-    const next: AlteronDocument = {
-      ...doc,
-      nodes: { ...doc.nodes, [id]: node },
-      pages,
-    };
-    computeAbsoluteTransforms(next, pageId);
+    if (!id) return;
     set({
-      doc: next,
+      doc,
       selection: [id],
-      status: `Created ${node.name}`,
+      status: `Created ${doc.nodes[id]?.name ?? type}`,
     });
+    get().persistDocument();
+  },
+
+  beginCreateShape: (type, worldX, worldY) => {
+    get().pushHistory();
+    const { doc, id } = createShapeInDocument(
+      get().doc,
+      type,
+      worldX,
+      worldY,
+      type === "TEXT" ? 200 : 1,
+      type === "TEXT" ? 24 : 1
+    );
+    if (!id) return null;
+    set({
+      doc,
+      selection: [id],
+      status: `Drawing ${doc.nodes[id]?.name ?? type}…`,
+    });
+    return id;
+  },
+
+  updateCreateShape: (id, x0, y0, x1, y1) => {
+    const x = Math.min(x0, x1);
+    const y = Math.min(y0, y1);
+    const w = Math.max(1, Math.abs(x1 - x0));
+    const h = Math.max(1, Math.abs(y1 - y0));
+    const doc = updateNodeRect(get().doc, id, x, y, w, h);
+    set({ doc });
+  },
+
+  resizeSelected: (handle, worldX, worldY, opts) => {
+    const { selection, doc } = get();
+    const id = selection[0];
+    if (!id) return;
+    const next = resizeNodeByHandle(doc, id, handle, worldX, worldY, {
+      keepAspect: opts?.keepAspect,
+    });
+    set({ doc: next });
+  },
+
+  rotateSelected: (degrees) => {
+    const { selection, doc } = get();
+    const id = selection[0];
+    if (!id) return;
+    set({ doc: rotateNode(doc, id, degrees) });
+    get().persistDocument();
+  },
+
+  alignSelection: (mode) => {
+    const { selection, doc } = get();
+    if (selection.length < 2) return;
+    get().pushHistory();
+    set({
+      doc: alignNodes(doc, selection, mode),
+      status: `Aligned (${mode})`,
+    });
+    get().persistDocument();
+  },
+
+  setSelectionAutoLayout: (patch) => {
+    const { selection, doc } = get();
+    const id = selection[0];
+    if (!id) return;
+    get().pushHistory();
+    set({
+      doc: setAutoLayout(doc, id, patch),
+      status: "Auto layout updated",
+    });
+    get().persistDocument();
+  },
+
+  booleanSelection: (op) => {
+    const { selection, doc } = get();
+    if (selection.length < 2) return;
+    get().pushHistory();
+    const r = applyBooleanOperation(doc, selection, op);
+    if (!r.id) return;
+    set({
+      doc: r.doc,
+      selection: [r.id],
+      status: `Boolean ${op}`,
+    });
+    get().persistDocument();
+  },
+
+  createComponentFromSelection: () => {
+    const { selection, doc } = get();
+    const id = selection[0];
+    if (!id) return;
+    get().pushHistory();
+    const r = createComponentFromNode(doc, id);
+    set({
+      doc: r.doc,
+      selection: [r.componentId],
+      status: "Created component",
+    });
+    get().persistDocument();
+  },
+
+  instantiateSelectedComponent: () => {
+    const { selection, doc } = get();
+    const id = selection[0];
+    if (!id) return;
+    const node = doc.nodes[id];
+    const componentId =
+      node?.type === "COMPONENT"
+        ? id
+        : node?.type === "INSTANCE" && "componentId" in node
+          ? (node.componentId as string)
+          : id;
+    get().pushHistory();
+    const r = createInstanceOf(doc, componentId);
+    if (!r.instanceId) return;
+    set({
+      doc: r.doc,
+      selection: [r.instanceId],
+      status: "Created instance",
+    });
+    get().persistDocument();
+  },
+
+  swapSelectedInstance: (componentId) => {
+    const { selection, doc } = get();
+    const id = selection[0];
+    if (!id) return;
+    get().pushHistory();
+    set({
+      doc: swapInstanceComponent(doc, id, componentId),
+      status: "Swapped instance",
+    });
+    get().persistDocument();
+  },
+
+  createStyleFromSelection: (name) => {
+    const { selection, doc } = get();
+    const id = selection[0];
+    const node = id ? doc.nodes[id] : null;
+    if (!node) return;
+    get().pushHistory();
+    const r = createFillStyle(doc, name || "Style", node.fills);
+    let next = r.doc;
+    next = applyFillStyle(next, id!, r.styleId);
+    set({ doc: next, status: `Style “${name}” created` });
+    get().persistDocument();
+  },
+
+  applyStyleToSelection: (styleId) => {
+    const { selection, doc } = get();
+    if (!selection.length) return;
+    get().pushHistory();
+    let next = doc;
+    for (const id of selection) next = applyFillStyle(next, id, styleId);
+    set({ doc: next, status: "Style applied" });
+    get().persistDocument();
+  },
+
+  createVariableFromSelection: (name) => {
+    const { selection, doc } = get();
+    const id = selection[0];
+    const node = id ? doc.nodes[id] : null;
+    if (!node) return;
+    const solid = node.fills.find((f) => f.type === "SOLID" && "color" in f) as
+      | { color: { r: number; g: number; b: number; a: number } }
+      | undefined;
+    if (!solid) {
+      set({ status: "Select a layer with a solid fill first" });
+      return;
+    }
+    get().pushHistory();
+    const r = createColorVariable(doc, name || "Color", solid.color);
+    set({
+      doc: r.doc,
+      status: `Variable “${name}” created`,
+    });
+    get().persistDocument();
+  },
+
+  applyVariableToSelection: (variableId) => {
+    const { selection, doc } = get();
+    if (!selection.length) return;
+    get().pushHistory();
+    let next = doc;
+    for (const id of selection)
+      next = applyColorVariableAsFill(next, id, variableId);
+    set({ doc: next, status: "Variable applied" });
+    get().persistDocument();
+  },
+
+  placeImage: (dataUrl, mimeType, worldX, worldY, width, height, name) => {
+    get().pushHistory();
+    const r = placeImageAsset(
+      get().doc,
+      dataUrl,
+      mimeType,
+      worldX,
+      worldY,
+      width,
+      height,
+      { name }
+    );
+    set({
+      doc: r.doc,
+      selection: r.id ? [r.id] : [],
+      status: "Image placed",
+      tool: "move",
+    });
+    get().persistDocument();
+  },
+
+  commitPenPath: (points, closed) => {
+    if (points.length < 2) return;
+    get().pushHistory();
+    const r = createVectorFromPoints(get().doc, points, { closed });
+    if (!r.id) return;
+    set({
+      doc: r.doc,
+      selection: [r.id],
+      status: closed ? "Closed vector" : "Vector path",
+      tool: "move",
+    });
+    get().persistDocument();
+  },
+
+  addCommentAt: (x, y, message) => {
+    get().pushHistory();
+    const r = createComment(get().doc, x, y, message, {
+      pageId: get().doc.currentPageId ?? undefined,
+    });
+    set({
+      doc: r.doc,
+      selectedCommentId: r.commentId,
+      status: "Comment added",
+      tool: "move",
+    });
+    get().persistDocument();
+  },
+
+  resolveSelectedComment: (commentId, resolved = true) => {
+    get().pushHistory();
+    set({
+      doc: resolveComment(get().doc, commentId, resolved),
+      status: resolved ? "Comment resolved" : "Comment reopened",
+    });
+    get().persistDocument();
+  },
+
+  updateSelectedComment: (commentId, message) => {
+    get().pushHistory();
+    set({
+      doc: updateCommentMessage(get().doc, commentId, message),
+      status: "Comment updated",
+    });
+    get().persistDocument();
+  },
+
+  deleteSelectedComment: (commentId) => {
+    get().pushHistory();
+    set({
+      doc: deleteComment(get().doc, commentId),
+      selectedCommentId: null,
+      status: "Comment deleted",
+    });
+    get().persistDocument();
+  },
+
+  setVariableMode: (collectionId, modeId) => {
+    get().pushHistory();
+    set({
+      doc: setActiveMode(get().doc, collectionId, modeId),
+      status: "Variable mode switched",
+    });
+    get().persistDocument();
+  },
+
+  addModeToCollection: (collectionId, name) => {
+    get().pushHistory();
+    const r = addVariableMode(get().doc, collectionId, name);
+    set({
+      doc: r.doc,
+      status: r.modeId ? `Mode “${name}” added` : "Could not add mode",
+    });
+    get().persistDocument();
+  },
+
+  moveVectorPointAt: (id, index, local, closed) => {
+    set({ doc: moveVectorPoint(get().doc, id, index, local, closed) });
+  },
+
+  insertVectorPointAt: (id, afterIndex, local, closed) => {
+    get().pushHistory();
+    set({
+      doc: insertVectorPoint(get().doc, id, afterIndex, local, closed),
+      status: "Point inserted",
+    });
+    get().persistDocument();
+  },
+
+  deleteVectorPointAt: (id, index, closed) => {
+    get().pushHistory();
+    set({
+      doc: deleteVectorPoint(get().doc, id, index, closed),
+      status: "Point deleted",
+    });
+    get().persistDocument();
+  },
+
+  setVectorPathClosed: (id, closed) => {
+    get().pushHistory();
+    set({
+      doc: setVectorClosed(get().doc, id, closed),
+      status: closed ? "Path closed" : "Path opened",
+    });
+    get().persistDocument();
   },
 
   patchSelected: (patch) => {
@@ -634,13 +1109,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     if (!selection.length) return;
     get().pushHistory();
     let next = doc;
+    // Size patches use resizeNodeApplyingConstraints so Design-panel W/H
+    // reflows MAX/CENTER/STRETCH/SCALE children (same as canvas handles).
     for (const id of selection) {
-      next = updateNode(next, id, patch);
-    }
-    if (next.currentPageId) {
-      computeAbsoluteTransforms(next, next.currentPageId);
+      next = applyNodePatch(next, id, patch);
     }
     set({ doc: next });
+    get().persistDocument();
   },
 
   renameNode: (id, name) => {
@@ -654,6 +1129,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       computeAbsoluteTransforms(next, next.currentPageId);
     }
     set({ doc: next });
+    get().persistDocument();
     get().persistSession();
   },
 
@@ -677,6 +1153,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       computeAbsoluteTransforms(next, next.currentPageId);
     }
     set({ doc: next });
+    get().persistDocument();
   },
 
   undo: () => {
@@ -689,6 +1166,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       doc: prev.doc,
       selection: [],
     });
+    get().persistDocument();
   },
 
   redo: () => {
@@ -701,6 +1179,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       doc: nxt.doc,
       selection: [],
     });
+    get().persistDocument();
   },
 
   toggleVisibility: (ids) => {
@@ -754,6 +1233,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       selection: result.selection,
       status: result.status || get().status,
     });
+    get().persistDocument();
     get().persistSession();
   },
 }));

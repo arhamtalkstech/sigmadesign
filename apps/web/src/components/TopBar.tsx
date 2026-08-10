@@ -6,6 +6,7 @@ import { useDocumentStore } from "@/store/document-store";
 import { importFileToLibrary } from "@/lib/library-api";
 import { ChromeIcons, Icon } from "@/lib/chrome-icons";
 import { clampZoom, formatZoomPercent } from "@/lib/viewport";
+import { exportDocumentRegionToPng } from "@/lib/export-png";
 
 export function TopBar() {
   const router = useRouter();
@@ -83,6 +84,26 @@ export function TopBar() {
         <button type="button" className="sigma-topbar-btn" onClick={redo}>
           <Icon icon={ChromeIcons.Redo2} size={14} />
           Redo
+        </button>
+        <button
+          type="button"
+          className="sigma-topbar-btn"
+          title="Export selection or page as PNG"
+          onClick={() => {
+            const s = useDocumentStore.getState();
+            void exportDocumentRegionToPng(s.doc, {
+              nodeIds: s.selection.length ? s.selection : undefined,
+              fileName: `${s.doc.name || "export"}.png`,
+            })
+              .then(() => setStatus("Exported PNG"))
+              .catch((e) =>
+                setStatus(
+                  `Export failed: ${e instanceof Error ? e.message : String(e)}`
+                )
+              );
+          }}
+        >
+          Export PNG
         </button>
       </nav>
 
