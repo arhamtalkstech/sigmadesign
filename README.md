@@ -1,18 +1,60 @@
 # SigmaDesign
 
-**SigmaDesign** is a local-first design editor. Import a design archive once, keep it as **`.sig`** in your machine library, and reopen from disk — no cloud seats, no accounts required for the core workflow.
+**Local-first design editor.** Import a design archive once, keep it as **`.sig`** on your machine, and reopen anytime — no cloud seats, no accounts required for the core workflow.
+
+<p align="center">
+  <img src="docs/screenshots/canvas-portfolio.jpg" alt="SigmaDesign canvas showing an imported product portfolio design" width="920" />
+</p>
+
+<p align="center">
+  <a href="#quick-start"><img src="https://img.shields.io/badge/get_started-pnpm_dev-6b70e8?style=for-the-badge" alt="Get started" /></a>
+  <a href="https://github.com/arhamtalkstech/sigmadesign"><img src="https://img.shields.io/badge/GitHub-sigmadesign-181717?style=for-the-badge&logo=github" alt="GitHub" /></a>
+  <img src="https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=nextdotjs" alt="Next.js 15" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License" />
+</p>
 
 ---
 
 ## Why SigmaDesign
 
-| Principle | What you get |
+| | |
 | --- | --- |
 | **Local-first** | Library, session, and caches live under `~/.sigmadesign` (configurable). |
-| **Stable URLs** | `/file/{id}` always opens the same library file. |
-| **Import once** | Decode → expand components → cache ADM JSON for fast reopen. |
-| **High-fidelity canvas** | Vectors, Lucide-style icons, images (including QR codes), text, and shadows. |
-| **Own your files** | `.sig` is your library format; you can still import compatible `.fig` archives. |
+| **Import once** | Decode → expand components → open from disk in milliseconds. |
+| **High-fidelity canvas** | Vectors, icons, images, text, shadows, blend modes. |
+| **Authoring tools** | Frames, shapes, pen, resize/rotate, snap, booleans, auto layout. |
+| **Own your files** | `.sig` library format; still imports compatible `.fig` archives. |
+
+---
+
+## Screenshots
+
+| Library home | Canvas | Design panel |
+| :----------: | :----: | :----------: |
+| <img src="docs/screenshots/library-home.jpg" alt="Library home with local .sig files" width="280" /> | <img src="docs/screenshots/canvas-portfolio.jpg" alt="Canvas editor" width="280" /> | <img src="docs/screenshots/design-panel.jpg" alt="Selection handles and design properties" width="280" /> |
+| Private local library — drop `.sig` / `.fig` or create a blank file | High-fidelity scene with layers, tools, and auto-save | Transform, fill, stroke, components, styles, variables |
+
+<p align="center">
+  <img src="docs/screenshots/library-home.jpg" alt="SigmaDesign library home" width="820" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/design-panel.jpg" alt="SigmaDesign design panel and selection" width="820" />
+</p>
+
+---
+
+## Features
+
+- **Import** design archives (`.fig` / `.sig`) into a private library with stable `/file/{id}` URLs  
+- **Canvas** with pan, zoom, hit-testing, selection handles, and resize / rotate  
+- **Tools** — move, hand, frame, rectangle, ellipse, text, pen, image place, comments  
+- **Clipboard paste** from design tools (with warning when image bytes are missing)  
+- **Auto-save** full document writeback into self-contained `.sig` files  
+- **Design system basics** — components, instances, fill styles, color variables, modes  
+- **Export PNG** of the page or current selection  
+- **No cloud required** for the core path  
 
 ---
 
@@ -34,13 +76,13 @@ pnpm dev:3010   # → http://localhost:3010
 
 ### First five minutes
 
-1. Open `/` — library home.  
-2. Click **Import design file** (or drop a `.sig` / `.fig` on the page).  
-3. You land on `/file/{id}` with layers, canvas, and properties.  
-4. Pan (space+drag / scroll), zoom (ctrl+wheel), select layers.  
-5. Return home with the brand control in the top bar.
+1. Open `/` — your library home  
+2. **Import design file** (or drop a `.sig` / `.fig`)  
+3. Land on `/file/{id}` — layers, canvas, design panel  
+4. Pan (space + drag / scroll), zoom (ctrl + wheel), select and edit  
+5. Return home via the brand control in the top bar  
 
-More detail: **[docs/USAGE.md](./docs/USAGE.md)**.
+More detail: **[docs/USAGE.md](./docs/USAGE.md)**
 
 ---
 
@@ -56,7 +98,7 @@ More detail: **[docs/USAGE.md](./docs/USAGE.md)**.
 
 ## Local data
 
-```
+```text
 ~/.sigmadesign/              # or $SIGMADESIGN_HOME
   sigmadesign.db             # SQLite: files, viewport, last opened
   library/
@@ -70,14 +112,14 @@ Session state (viewport, page, selection, expanded layers) is saved while you wo
 
 ---
 
-## Monorepo map
+## Monorepo
 
-```
+```text
 apps/web                   Next.js app — UI + library API + canvas
-packages/document-model    Scene graph types, transforms, layout helpers
+packages/document-model    Scene graph types, transforms, authoring ops
 packages/fig-format        Design-archive ZIP + kiwi codec + path blobs
 packages/fig-import        Archive → ADM + instance expansion + path resolve
-docs/                      Usage, architecture, development
+docs/                      Usage, architecture, development, screenshots
 ```
 
 Deep dives:
@@ -91,7 +133,7 @@ Deep dives:
 
 ## Architecture (short)
 
-```
+```text
 .fig / .sig  →  import once  →  ~/.sigmadesign/library/{id}.sig
                               →  SQLite metadata + session
                               →  cache/{id}.adm.json  (ADM scene graph)
@@ -125,7 +167,7 @@ Deep dives:
 | **`.sig`** | SigmaDesign library file (recommended). |
 | **`.fig`** | Compatible design archive; imported and stored as `.sig`. |
 
-Archives are ZIP packages: kiwi-encoded scene graph, blobs, and `images/*` bitmaps.
+Archives are ZIP packages: kiwi-encoded scene graph, blobs, and `images/*` bitmaps. Edited library files may also store self-contained ADM JSON after the `SIGMABLANK` header for reliable writeback.
 
 ---
 
@@ -141,10 +183,10 @@ Copy `.env.example` → `.env.local` if needed. **Never commit secrets.**
 
 ## Security & privacy
 
-- No required third-party auth for core local use.  
-- Design data and SQLite stay on disk under `SIGMADESIGN_HOME`.  
-- `.gitignore` excludes `.env*`, keys, DB files, ADM caches, and runtime library data.  
-- Do not commit private design files or API tokens.
+- No required third-party auth for core local use  
+- Design data and SQLite stay on disk under `SIGMADESIGN_HOME`  
+- `.gitignore` excludes `.env*`, keys, DB files, ADM caches, and runtime library data  
+- Do not commit private design files or API tokens  
 
 ---
 
@@ -154,7 +196,7 @@ Copy `.env.example` → `.env.local` if needed. **Never commit secrets.**
 pnpm test
 ```
 
-Includes path/geometry regression, instance-swap icons, sidebar layout, routes/brand, and UI chrome checks.
+Includes document-model authoring tests, path/geometry regression, instance-swap icons, routes/brand, UI chrome, and `.sig` writeback round-trips.
 
 ---
 
@@ -167,11 +209,13 @@ MIT — see [LICENSE](./LICENSE).
 ## Roadmap ideas
 
 - Thumbnails for library cards  
-- Export `.sig` / PNG  
 - Multi-page switcher UI  
+- Deeper Bezier / boolean computational geometry  
 - Performance profiling for 50k+ node files  
-- Optional cloud sync (out of scope for v0 core)
+- Optional cloud sync (out of scope for core local workflow)
 
 ---
 
-**SigmaDesign** — your designs, on your machine.
+<p align="center">
+  <strong>SigmaDesign</strong> — your designs, on your machine.
+</p>
