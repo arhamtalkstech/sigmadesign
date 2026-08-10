@@ -12,6 +12,7 @@ import {
   type LibraryFile,
 } from "@/lib/library-api";
 import { ChromeIcons, Icon } from "@/lib/chrome-icons";
+import { formatLibraryHomeDisplay } from "@/lib/display-path";
 
 /**
  * Library home at `/` — lists all opened/imported design files.
@@ -213,7 +214,7 @@ export function Home() {
             </h2>
             {home && (
               <span className="sigma-path" title={home}>
-                {home}
+                {formatLibraryHomeDisplay(home)}
               </span>
             )}
           </div>
