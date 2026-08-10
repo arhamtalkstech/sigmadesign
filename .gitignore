@@ -70,6 +70,8 @@ debug-*.png
 
 # ── Large binary dumps / local only ───────────────────────
 *.zip
+# Ship the Agents skill pack (downloadable from /connect)
+!apps/web/public/skills/*.zip
 # Optional local fidelity fixtures (never ship in the product repo)
 sample-figma-file.fig
 sample-*.fig

@@ -710,14 +710,21 @@ export function PropertiesPanel() {
                 }}
               >
                 Instance of{" "}
-                {node.componentId ??
-                  (node as { componentKey?: string }).componentKey ??
-                  "—"}
+                {String(
+                  ("componentId" in node && node.componentId) ||
+                    ("componentKey" in node &&
+                      (node as { componentKey?: string }).componentKey) ||
+                    "—"
+                )}
                 {components.length > 0 && (
                   <select
                     className="field-input"
                     style={{ marginTop: 6, width: "100%" }}
-                    value={String(node.componentId ?? "")}
+                    value={String(
+                      "componentId" in node && node.componentId
+                        ? node.componentId
+                        : ""
+                    )}
                     onChange={(e) => {
                       useDocumentStore
                         .getState()

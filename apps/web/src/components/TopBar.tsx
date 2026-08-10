@@ -60,6 +60,17 @@ export function TopBar() {
         </button>
         <button
           type="button"
+          className="sigma-topbar-btn"
+          title="Connect local coding agents"
+          onClick={() => {
+            persistSession();
+            router.push("/connect");
+          }}
+        >
+          Agents
+        </button>
+        <button
+          type="button"
           className="sigma-topbar-btn primary"
           onClick={() => fileRef.current?.click()}
         >

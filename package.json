@@ -19,7 +19,9 @@
     "test": "pnpm -r test",
     "fig:inspect": "pnpm --filter @alteron/fig-format inspect",
     "typecheck": "pnpm -r typecheck",
-    "lint:brand": "pnpm --filter @alteron/web test -- src/routes-and-brand.test.ts"
+    "lint:brand": "pnpm --filter @alteron/web test -- src/routes-and-brand.test.ts",
+    "mcp": "pnpm --filter @alteron/web exec tsx src/mcp/server.ts",
+    "skill:pack": "node scripts/pack-skill.mjs"
   },
   "engines": {
     "node": ">=20"

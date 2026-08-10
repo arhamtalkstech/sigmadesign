@@ -92,6 +92,43 @@ describe("library ids (SQLite-backed)", () => {
   });
 });
 
+describe("routes: agents / connect page", () => {
+  it("ships /connect as agents setup surface with skill download", () => {
+    const path = resolve(src, "app/connect/page.tsx");
+    expect(existsSync(path)).toBe(true);
+    const page = readFileSync(path, "utf8");
+    expect(page).toMatch(/ConnectClient/);
+    const client = read("app/connect/connect-client.tsx");
+    expect(client).toMatch(/Download skill zip|skill zip/i);
+    expect(client).toMatch(/sigmadesign-implement\.zip/);
+    expect(client).toMatch(/list_library_files|Available tools|pnpm mcp/);
+    // Must not pull Node-only MCP handlers into the client bundle
+    expect(client).not.toMatch(/@\/mcp\/tools["']/);
+    expect(client).toMatch(/@\/mcp\/tool-catalog/);
+  });
+
+  it("tool-catalog is browser-safe (no node: or library-service imports)", () => {
+    const cat = read("mcp/tool-catalog.ts");
+    expect(cat).not.toMatch(/node:fs|better-sqlite3|library-service|from ["']@\/server\//);
+    expect(cat).toMatch(/list_library_files/);
+    expect(cat).toMatch(/get_design_context/);
+  });
+
+  it("library home and top bar link to /connect without putting agent copy on Editor canvas", () => {
+    const home = read("components/Home.tsx");
+    expect(home).toMatch(/\/connect/);
+    const top = read("components/TopBar.tsx");
+    expect(top).toMatch(/\/connect/);
+    const ed = read("components/Editor.tsx");
+    expect(ed).not.toMatch(/\/connect/);
+    expect(ed).not.toMatch(/\bMCP\b/i);
+    expect(ed).not.toMatch(/connector/i);
+    const canvas = read("components/Canvas.tsx");
+    expect(canvas).not.toMatch(/\bMCP\b/i);
+    expect(canvas).not.toMatch(/connector/i);
+  });
+});
+
 describe("user-visible brand: no Figma wording", () => {
   const uiFiles = [
     "components/Home.tsx",

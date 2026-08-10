@@ -223,7 +223,6 @@ interface DocumentState {
   ) => void;
   deleteVectorPointAt: (id: NodeId, index: number, closed?: boolean) => void;
   setVectorPathClosed: (id: NodeId, closed: boolean) => void;
-  selectedCommentId: string | null;
   setSelectedCommentId: (id: string | null) => void;
   loadDocument: (doc: AlteronDocument) => void;
   undo: () => void;
@@ -515,13 +514,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         };
         let p: string | null | undefined = doc.nodes[focusId]?.parentId;
         while (p) {
-          const n = doc.nodes[p];
-          if (!n) break;
-          if (n.type === "PAGE") {
+          const parentNode: SceneNode | undefined = doc.nodes[p];
+          if (!parentNode) break;
+          if (parentNode.type === "PAGE") {
             doc.currentPageId = p;
             break;
           }
-          p = n.parentId;
+          p = parentNode.parentId;
         }
         let cur: string | null | undefined = focusId;
         while (cur) {

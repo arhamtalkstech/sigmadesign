@@ -127,6 +127,13 @@ export function Home() {
           </div>
         </div>
         <div className="sigma-home-actions">
+          <a
+            href="/connect"
+            className="sigma-btn sigma-btn-ghost"
+            title="Connect local coding agents to this library"
+          >
+            Agents
+          </a>
           <button
             type="button"
             className="sigma-btn sigma-btn-ghost"
@@ -221,9 +228,9 @@ export function Home() {
               <button
                 type="button"
                 className="sigma-btn sigma-btn-primary"
-                onClick={() => void onSample()}
+                onClick={() => fileRef.current?.click()}
               >
-                Try the sample design
+                Import design file
               </button>
             </div>
           )}

@@ -734,6 +734,175 @@ code {
   }
 }
 
+/* ── Connect / Agents page ────────────────────────────────── */
+
+.sigma-connect {
+  position: relative;
+  min-height: 100vh;
+  overflow: auto;
+  background: var(--chrome-bg);
+  color: var(--chrome-text);
+}
+
+.sigma-connect-bg {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 0%, rgba(107, 112, 232, 0.14), transparent),
+    radial-gradient(ellipse 50% 35% at 90% 10%, rgba(94, 207, 186, 0.08), transparent);
+}
+
+.sigma-connect-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--chrome-border);
+}
+
+.sigma-connect-brand {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sigma-connect-main {
+  position: relative;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 36px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sigma-connect-hero h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 6px 0 12px;
+  line-height: 1.2;
+}
+
+.sigma-connect-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sigma-mint);
+}
+
+.sigma-connect-lead {
+  color: var(--chrome-text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+  max-width: 52ch;
+  margin-bottom: 18px;
+}
+
+.sigma-connect-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.sigma-connect-card {
+  background: var(--chrome-bg-elevated);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+}
+
+.sigma-connect-card h2 {
+  font-size: 15px;
+  font-weight: 650;
+  margin-bottom: 10px;
+}
+
+.sigma-connect-card p {
+  font-size: 13px;
+  color: var(--chrome-text-muted);
+  line-height: 1.55;
+  margin-bottom: 10px;
+}
+
+.sigma-connect-card-soft {
+  background: rgba(107, 112, 232, 0.06);
+  border-color: rgba(107, 112, 232, 0.2);
+}
+
+.sigma-connect-muted {
+  font-size: 12px !important;
+}
+
+.sigma-connect-code {
+  background: #0c0e14;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  overflow-x: auto;
+  color: #d8dce8;
+  margin: 10px 0 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sigma-connect-list {
+  margin: 0 0 14px 18px;
+  color: var(--chrome-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sigma-connect-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.sigma-connect-tool {
+  display: grid;
+  grid-template-columns: minmax(140px, 200px) 1fr;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid transparent;
+}
+
+.sigma-connect-tool:hover {
+  border-color: var(--chrome-border);
+}
+
+.sigma-connect-tool-name {
+  font-size: 11px;
+  color: var(--sigma-mint);
+  word-break: break-all;
+}
+
+.sigma-connect-tool-desc {
+  font-size: 12px;
+  color: var(--chrome-text-muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .sigma-connect-tool {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Home screen ──────────────────────────────────────────── */
 
 .sigma-home {

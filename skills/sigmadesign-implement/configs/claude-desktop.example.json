@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "sigmadesign": {
+      "command": "pnpm",
+      "args": [
+        "--dir",
+        "/ABSOLUTE/PATH/TO/sigmadesign",
+        "exec",
+        "tsx",
+        "apps/web/src/mcp/server.ts"
+      ],
+      "env": {
+        "SIGMADESIGN_HOME": "/ABSOLUTE/PATH/TO/.sigmadesign"
+      }
+    }
+  }
+}
